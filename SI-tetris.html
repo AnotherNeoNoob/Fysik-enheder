@@ -151,9 +151,7 @@
       <span id="block-symbol" class="symbol">(F)</span>
     </div>
 
-    <div class="bins-container" id="bins">
-      <!-- Genereres af JS -->
-    </div>
+    <div class="bins-container" id="bins"></div>
 
     <div id="game-over" class="overlay">
       <h2>SI-Tetris</h2>
@@ -201,13 +199,20 @@
       
       const correctUnit = currentBlock.unit;
 
-      let availableUnits = [...new Set(dataset.map(d => d.unit))];
-      availableUnits = availableUnits.filter(u => u !== correctUnit);
+      // Hent alle unikke enheder
+      let allUnits = Array.from(new Set(dataset.map(d => d.unit)));
+      
+      // Filtrer den korrekte enhed stramt fra
+      let wrongPool = allUnits.filter(u => u !== correctUnit);
 
-      availableUnits.sort(() => Math.random() - 0.5);
-      const wrongUnits = availableUnits.slice(0, numBins - 1);
+      // Bland puljen af forkerte enheder
+      wrongPool.sort(() => Math.random() - 0.5);
 
-      activeBins = [correctUnit, ...wrongUnits];
+      // Pluk præcis (numBins - 1) forkerte svar
+      const selectedWrong = wrongPool.slice(0, numBins - 1);
+
+      // Kombiner og bland kasserne
+      activeBins = [correctUnit, ...selectedWrong];
       activeBins.sort(() => Math.random() - 0.5);
 
       activeBins.forEach((unit, index) => {
