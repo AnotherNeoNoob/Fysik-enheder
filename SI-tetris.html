@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fysik B: SI-Tetris</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    h1 { margin: 0 0 5px 0; font-size: 1.8rem; color: #38bdf8; }
+    p { margin: 0 0 15px 0; color: #94a3b8; font-size: 0.95rem; }
+
+    .game-board {
+      position: relative;
+      width: 450px;
+      height: 550px;
+      background: #1e293b;
+      border: 4px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: #0f172a;
+      border-bottom: 2px solid #334155;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+
+    .falling-block {
+      position: absolute;
+      width: 130px;
+      height: 50px;
+      background: #ef4444;
+      color: white;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: left 0.1s ease-out, width 0.2s, height 0.2s;
+      border: 2px solid #f87171;
+    }
+
+    .falling-block.vertical {
+      width: 50px;
+      height: 110px;
+      background: #f59e0b;
+      border-color: #fbbf24;
+    }
+
+    .falling-block .name { font-size: 1rem; text-align: center; }
+    .falling-block .symbol { font-size: 0.85rem; color: #fecaca; }
+    .falling-block.vertical .symbol-only { font-size: 1.8rem; font-weight: 800; color: #ffffff; }
+
+    .bins-container {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 70px;
+      display: flex;
+      background: #0f172a;
+      border-top: 2px solid #334155;
+    }
+
+    .bin {
+      flex: 1;
+      border-right: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+      color: #38bdf8;
+      cursor: pointer;
+      text-align: center;
+      padding: 2px;
+      user-select: none;
+      transition: background 0.2s;
+    }
+
+    .bin:last-child { border-right: none; }
+    .bin:hover { background: #1e293b; }
+
+    .controls-hint {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .overlay h2 { font-size: 2rem; margin-bottom: 5px; color: #f8fafc; }
+    .overlay .medal { font-size: 4rem; margin: 10px 0; }
+
+    button {
+      padding: 10px 24px;
+      background: #38bdf8;
+      color: #0f172a;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover { background: #7dd3fc; }
+  </style>
+</head>
+<body>
+
+  <h1>⚡ Fysik B: SI-Tetris</h1>
+  <p>Grib de faldende størrelser i den rigtige SI-enhed!</p>
+
+  <div class="game-board" id="board">
+    <div class="top-bar">
+      <div>Point: <span id="score" style="color: #38bdf8;">0</span></div>
+      <div>Bølge: <span id="wave" style="color: #eab308;">1</span></div>
+      <div>Liv: <span id="lives" style="color: #ef4444;">❤️❤️❤️</span></div>
+    </div>
+
+    <div id="block" class="falling-block" style="display: none;">
+      <span id="block-name" class="name">Kraft</span>
+      <span id="block-symbol" class="symbol">(F)</span>
+    </div>
+
+    <div class="bins-container" id="bins">
+      <!-- Genereres af JS -->
+    </div>
+
+    <div id="game-over" class="overlay">
+      <h2>SI-Tetris</h2>
+      <div id="medal" class="medal">🎮</div>
+      <p id="final-stats">Styr med ⬅️ ➡️ piltaster eller klik på søjlerne!<br><br><small style="color:#94a3b8;">Fra Bølge 6 drejer nogle brikker om på højkant og viser KUN symbolet!</small></p>
+      <button onclick="startGame()">Start Spil</button>
+    </div>
+  </div>
+
+  <div class="controls-hint">Brug <b>Pil Venstre / Pil Højre</b> eller <b>Klik</b> på en kasse for at flytte blokken.</div>
+
+  <script>
+    const dataset = [
+      { name: "Kraft", symbol: "F", unit: "N" },
+      { name: "Tryk", symbol: "p", unit: "Pa" },
+      { name: "Areal", symbol: "A", unit: "m²" },
+      { name: "Volumen", symbol: "V", unit: "m³" },
+      { name: "Hastighed", symbol: "v", unit: "m/s" },
+      { name: "Densitet", symbol: "ρ", unit: "kg/m³" },
+      { name: "Masse", symbol: "m", unit: "kg" },
+      { name: "Energi", symbol: "E", unit: "J" },
+      { name: "Effekt", symbol: "P", unit: "W" },
+      { name: "Bølgelængde", symbol: "λ", unit: "m" },
+      { name: "Frekvens", symbol: "f", unit: "Hz" }
+    ];
+
+    let score = 0;
+    let lives = 3;
+    let wave = 1;
+    let currentBlock = null;
+    let previousBlock = null;
+    let isVertical = false;
+    let blockX = 1;
+    let blockY = 50;
+    let fallSpeed = 2;
+    let gameInterval = null;
+    let activeBins = [];
+    const numBins = 3;
+
+    const blockElem = document.getElementById('block');
+    const binsContainer = document.getElementById('bins');
+
+    function setupBins() {
+      binsContainer.innerHTML = '';
+      
+      const correctUnit = currentBlock.unit;
+
+      let availableUnits = [...new Set(dataset.map(d => d.unit))];
+      availableUnits = availableUnits.filter(u => u !== correctUnit);
+
+      availableUnits.sort(() => Math.random() - 0.5);
+      const wrongUnits = availableUnits.slice(0, numBins - 1);
+
+      activeBins = [correctUnit, ...wrongUnits];
+      activeBins.sort(() => Math.random() - 0.5);
+
+      activeBins.forEach((unit, index) => {
+        const bin = document.createElement('div');
+        bin.className = 'bin';
+        bin.innerText = unit;
+        bin.onclick = () => { blockX = index; updateBlockPosition(); };
+        binsContainer.appendChild(bin);
+      });
+    }
+
+    function spawnBlock() {
+      let randomIndex;
+      let newBlock;
+
+      do {
+        randomIndex = Math.floor(Math.random() * dataset.length);
+        newBlock = dataset[randomIndex];
+      } while (previousBlock && newBlock.name === previousBlock.name);
+
+      currentBlock = newBlock;
+      previousBlock = currentBlock;
+
+      wave = Math.floor(score / 3) + 1;
+      isVertical = (wave > 5) && (Math.random() > 0.5);
+
+      const nameElem = document.getElementById('block-name');
+      const symbolElem = document.getElementById('block-symbol');
+
+      if (isVertical) {
+        blockElem.classList.add('vertical');
+        nameElem.style.display = 'none';
+        symbolElem.className = 'symbol-only';
+        symbolElem.innerText = currentBlock.symbol;
+      } else {
+        blockElem.classList.remove('vertical');
+        nameElem.style.display = 'block';
+        nameElem.innerText = currentBlock.name;
+        symbolElem.className = 'symbol';
+        symbolElem.innerText = `(${currentBlock.symbol})`;
+      }
+
+      blockY = 50;
+      blockX = 1;
+      blockElem.style.display = 'flex';
+
+      setupBins();
+      updateBlockPosition();
+    }
+
+    function updateBlockPosition() {
+      const binWidth = 450 / numBins;
+      const blockWidth = isVertical ? 50 : 130;
+      const xPos = (blockX * binWidth) + (binWidth / 2) - (blockWidth / 2);
+      blockElem.style.left = `${xPos}px`;
+      blockElem.style.top = `${blockY}px`;
+    }
+
+    function gameLoop() {
+      blockY += fallSpeed;
+      blockElem.style.top = `${blockY}px`;
+
+      const collisionY = isVertical ? 370 : 430;
+
+      if (blockY >= collisionY) {
+        checkHit();
+      }
+    }
+
+    function checkHit() {
+      const landedUnit = activeBins[blockX];
+
+      if (landedUnit === currentBlock.unit) {
+        score += 3;
+        fallSpeed += 0.12;
+      } else {
+        score = Math.max(0, score - 1);
+        lives--;
+      }
+
+      updateUI();
+
+      if (lives <= 0) {
+        endGame();
+      } else {
+        spawnBlock();
+      }
+    }
+
+    function updateUI() {
+      document.getElementById('score').innerText = score;
+      document.getElementById('lives').innerText = '❤️'.repeat(lives);
+      document.getElementById('wave').innerText = wave;
+    }
+
+    function startGame() {
+      score = 0;
+      lives = 3;
+      wave = 1;
+      fallSpeed = 2.5;
+      previousBlock = null;
+      updateUI();
+      document.getElementById('game-over').style.display = 'none';
+
+      spawnBlock();
+      if (gameInterval) clearInterval(gameInterval);
+      gameInterval = setInterval(gameLoop, 20);
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      blockElem.style.display = 'none';
+
+      const overlay = document.getElementById('game-over');
+      const medal = document.getElementById('medal');
+      const stats = document.getElementById('final-stats');
+
+      let trophy = '🥉';
+      if (score >= 30) trophy = '🥇';
+      else if (score >= 18) trophy = '🥈';
+
+      medal.innerText = trophy;
+      stats.innerHTML = `Du nåede <b>Bølge ${wave}</b> med <b>${score} point</b>!`;
+      overlay.style.display = 'flex';
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' && blockX > 0) {
+        blockX--;
+        updateBlockPosition();
+      } else if (e.key === 'ArrowRight' && blockX < numBins - 1) {
+        blockX++;
+        updateBlockPosition();
+      }
+    });
+  </script>
+</body>
+</html>
