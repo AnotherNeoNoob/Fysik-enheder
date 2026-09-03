@@ -61,7 +61,7 @@
     }
 
     .falling-block.vertical {
-      width: 50px;
+      width: 55px;
       height: 110px;
       background: #f59e0b;
       border-color: #fbbf24;
@@ -69,7 +69,14 @@
 
     .falling-block .name { font-size: 1rem; text-align: center; }
     .falling-block .symbol { font-size: 0.85rem; color: #fecaca; }
-    .falling-block.vertical .symbol-only { font-size: 1.8rem; font-weight: 800; color: #ffffff; }
+    
+    /* Gør symbolerne på højkant ekstra tydelige */
+    .falling-block.vertical .symbol-only { 
+      font-size: 2rem; 
+      font-weight: 900; 
+      color: #ffffff;
+      font-style: italic; /* Kursiv hjælper med at kende fysik-symboler fra enheder */
+    }
 
     .bins-container {
       position: absolute;
@@ -88,7 +95,7 @@
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      font-size: 0.9rem;
+      font-size: 1.1rem;
       color: #38bdf8;
       cursor: pointer;
       text-align: center;
@@ -164,18 +171,19 @@
   <div class="controls-hint">Brug <b>Pil Venstre / Pil Højre</b> eller <b>Klik</b> på en kasse for at flytte blokken.</div>
 
   <script>
+    // Unikt ID sikrer at spillet aldrig tager fejl af enslydende symboler/enheder
     const dataset = [
-      { name: "Kraft", symbol: "F", unit: "N" },
-      { name: "Tryk", symbol: "p", unit: "Pa" },
-      { name: "Areal", symbol: "A", unit: "m²" },
-      { name: "Volumen", symbol: "V", unit: "m³" },
-      { name: "Hastighed", symbol: "v", unit: "m/s" },
-      { name: "Densitet", symbol: "ρ", unit: "kg/m³" },
-      { name: "Masse", symbol: "m", unit: "kg" },
-      { name: "Energi", symbol: "E", unit: "J" },
-      { name: "Effekt", symbol: "P", unit: "W" },
-      { name: "Bølgelængde", symbol: "λ", unit: "m" },
-      { name: "Frekvens", symbol: "f", unit: "Hz" }
+      { id: "kraft", name: "Kraft", symbol: "F", unit: "N" },
+      { id: "tryk", name: "Tryk", symbol: "p", unit: "Pa" },
+      { id: "areal", name: "Areal", symbol: "A", unit: "m²" },
+      { id: "volumen", name: "Volumen", symbol: "V", unit: "m³" },
+      { id: "hastighed", name: "Hastighed", symbol: "v", unit: "m/s" },
+      { id: "densitet", name: "Densitet", symbol: "ρ", unit: "kg/m³" },
+      { id: "masse", name: "Masse", symbol: "m", unit: "kg" },
+      { id: "energi", name: "Energi", symbol: "E", unit: "J" },
+      { id: "effekt", name: "Effekt", symbol: "P", unit: "W" },
+      { id: "bolgelaengde", name: "Bølgelængde", symbol: "λ", unit: "m" },
+      { id: "frekvens", name: "Frekvens", symbol: "f", unit: "Hz" }
     ];
 
     let score = 0;
@@ -199,19 +207,19 @@
       
       const correctUnit = currentBlock.unit;
 
-      // Hent alle unikke enheder
+      // Hent alle unikke SI-enheder fra datasættet
       let allUnits = Array.from(new Set(dataset.map(d => d.unit)));
       
       // Filtrer den korrekte enhed stramt fra
       let wrongPool = allUnits.filter(u => u !== correctUnit);
 
-      // Bland puljen af forkerte enheder
+      // Bland de forkerte svarmuligheder
       wrongPool.sort(() => Math.random() - 0.5);
 
-      // Pluk præcis (numBins - 1) forkerte svar
+      // Vælg 2 tilfældige forkerte kasser
       const selectedWrong = wrongPool.slice(0, numBins - 1);
 
-      // Kombiner og bland kasserne
+      // Tving det korrekte svar med og bland kasserne
       activeBins = [correctUnit, ...selectedWrong];
       activeBins.sort(() => Math.random() - 0.5);
 
@@ -228,10 +236,11 @@
       let randomIndex;
       let newBlock;
 
+      // Undgå samme brik to gange i træk ud fra ID
       do {
         randomIndex = Math.floor(Math.random() * dataset.length);
         newBlock = dataset[randomIndex];
-      } while (previousBlock && newBlock.name === previousBlock.name);
+      } while (previousBlock && newBlock.id === previousBlock.id);
 
       currentBlock = newBlock;
       previousBlock = currentBlock;
@@ -265,7 +274,7 @@
 
     function updateBlockPosition() {
       const binWidth = 450 / numBins;
-      const blockWidth = isVertical ? 50 : 130;
+      const blockWidth = isVertical ? 55 : 130;
       const xPos = (blockX * binWidth) + (binWidth / 2) - (blockWidth / 2);
       blockElem.style.left = `${xPos}px`;
       blockElem.style.top = `${blockY}px`;
@@ -331,8 +340,8 @@
       const stats = document.getElementById('final-stats');
 
       let trophy = '🥉';
-      if (score >= 70) trophy = '🥇';
-      else if (score >= 40) trophy = '🥈';
+      if (score >= 30) trophy = '🥇';
+      else if (score >= 18) trophy = '🥈';
 
       medal.innerText = trophy;
       stats.innerHTML = `Du nåede <b>Bølge ${wave}</b> med <b>${score} point</b>!`;
