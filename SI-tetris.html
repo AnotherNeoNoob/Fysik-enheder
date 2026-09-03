@@ -331,8 +331,8 @@
       const stats = document.getElementById('final-stats');
 
       let trophy = '🥉';
-      if (score >= 30) trophy = '🥇';
-      else if (score >= 18) trophy = '🥈';
+      if (score >= 70) trophy = '🥇';
+      else if (score >= 40) trophy = '🥈';
 
       medal.innerText = trophy;
       stats.innerHTML = `Du nåede <b>Bølge ${wave}</b> med <b>${score} point</b>!`;
