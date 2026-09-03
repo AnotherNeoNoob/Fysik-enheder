@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fysik B: Størrelser, Symboler & Enheder</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f4f8;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    
+    header { text-align: center; margin-bottom: 20px; }
+    h1 { color: #1e293b; margin: 0 0 8px 0; font-size: 2.2rem; }
+    p.subtitle { color: #64748b; margin: 0 0 15px 0; font-size: 1.05rem; }
+
+    .scoreboard {
+      display: flex;
+      gap: 20px;
+      background: #ffffff;
+      padding: 12px 25px;
+      border-radius: 50px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      margin-bottom: 25px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    .score-box { display: flex; align-items: center; gap: 8px; }
+    .score-value { color: #2563eb; font-size: 1.3rem; }
+
+    .game-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      max-width: 950px;
+      width: 100%;
+    }
+    
+    .column {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+    }
+    
+    .column h2 {
+      font-size: 1.15rem;
+      text-align: center;
+      color: #0f172a;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 12px;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+    
+    .card {
+      background: #f8fafc;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px 10px;
+      margin: 10px 0;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      color: #334155;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    
+    .card:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+      transform: translateY(-1px);
+    }
+
+    .card.selected {
+      background: #fef9c3;
+      border-color: #eab308;
+      color: #854d0e;
+      box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.3);
+    }
+
+    .card.matched {
+      background: #dcfce7;
+      border-color: #22c55e;
+      color: #15803d;
+      cursor: default;
+      opacity: 0.65;
+      transform: none;
+    }
+
+    .card.wrong {
+      background: #fee2e2;
+      border-color: #ef4444;
+      color: #b91c1c;
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-5px); }
+      40%, 80% { transform: translateX(5px); }
+    }
+    
+    .controls {
+      margin-top: 25px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    button {
+      padding: 12px 28px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    button:hover { background-color: #1d4ed8; }
+    button:active { transform: scale(0.98); }
+
+    /* Modal dialog for resultat */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 100;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: white;
+      padding: 35px 40px;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.active .modal-card { transform: scale(1); }
+
+    .trophy-icon {
+      font-size: 4.5rem;
+      margin-bottom: 10px;
+      line-height: 1;
+    }
+
+    .trophy-gold { color: #eab308; filter: drop-shadow(0 4px 6px rgba(234, 179, 8, 0.4)); }
+    .trophy-silver { color: #94a3b8; filter: drop-shadow(0 4px 6px rgba(148, 163, 184, 0.4)); }
+    .trophy-bronze { color: #d97706; filter: drop-shadow(0 4px 6px rgba(217, 119, 6, 0.4)); }
+
+    .modal-card h2 { margin: 10px 0 5px 0; font-size: 1.8rem; color: #0f172a; }
+
+    .medal-title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .gold-text { color: #ca8a04; }
+    .silver-text { color: #64748b; }
+    .bronze-text { color: #b45309; }
+
+    .modal-stats {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px 0;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    .modal-stats p { margin: 6px 0; color: #475569; font-size: 0.95rem; }
+    .modal-stats span { font-weight: bold; color: #0f172a; float: right; }
+
+    @media (max-width: 768px) {
+      .game-container { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Fysik B: Størrelser & Enheder</h1>
+    <p class="subtitle">Match Fysisk Størrelse, Symbol og SI-Enhed korrekt</p>
+  </header>
+
+  <div class="scoreboard">
+    <div class="score-box">Point: <span id="score-val" class="score-value">0</span></div>
+    <div class="score-box" style="margin-left: 15px; color: #64748b;">Runder: <span id="match-val" style="color: #0f172a;">0</span>/11</div>
+  </div>
+
+  <div class="game-container">
+    <div class="column" id="col-quantity"><h2>Fysisk Størrelse</h2></div>
+    <div class="column" id="col-symbol"><h2>Symbol</h2></div>
+    <div class="column" id="col-unit"><h2>SI-Enhed</h2></div>
+  </div>
+
+  <div class="controls">
+    <button onclick="resetGame()">Start forfra</button>
+  </div>
+
+  <!-- Slut-skærm (Modal) -->
+  <div class="modal-overlay" id="end-modal">
+    <div class="modal-card">
+      <div id="trophy" class="trophy-icon">🏆</div>
+      <h2 id="modal-heading">Godt gået!</h2>
+      <div id="medal-text" class="medal-title">Guldtrofæ!</div>
+      
+      <div class="modal-stats">
+        <p>Endelig score: <span id="final-score">0</span></p>
+        <p>Maksimal score: <span>33 point</span></p>
+        <p>Korrekte matches: <span>11 / 11</span></p>
+        <p>Forkerte forsøg: <span id="wrong-count">0</span></p>
+      </div>
+
+      <button onclick="closeModalAndReset()">Spil igen</button>
+    </div>
+  </div>
+
+  <script>
+    const physicsData = [
+      { id: 1,  quantity: "Kraft",       symbol: "F", unit: "N (Newton)" },
+      { id: 2,  quantity: "Tryk",        symbol: "p", unit: "Pa (Pascal)" },
+      { id: 3,  quantity: "Areal",       symbol: "A", unit: "m² (Kvadratmeter)" },
+      { id: 4,  quantity: "Volumen",     symbol: "V", unit: "m³ (Kubikmeter)" },
+      { id: 5,  quantity: "Hastighed",   symbol: "v", unit: "m/s" },
+      { id: 6,  quantity: "Densitet",    symbol: "ρ", unit: "kg/m³" },
+      { id: 7,  quantity: "Masse",       symbol: "m", unit: "kg (Kilogram)" },
+      { id: 8,  quantity: "Energi",      symbol: "E", unit: "J (Joule)" },
+      { id: 9,  quantity: "Effekt",      symbol: "P", unit: "W (Watt)" },
+      { id: 10, quantity: "Bølgelængde", symbol: "λ", unit: "m (Meter)" },
+      { id: 11, quantity: "Frekvens",    symbol: "f", unit: "Hz (Hertz)" }
+    ];
+
+    let selected = { quantity: null, symbol: null, unit: null };
+    let matchesCount = 0;
+    let score = 0;
+    let wrongAttempts = 0;
+
+    function shuffle(array) {
+      return array.slice().sort(() => Math.random() - 0.5);
+    }
+
+    function initGame() {
+      matchesCount = 0;
+      score = 0;
+      wrongAttempts = 0;
+      selected = { quantity: null, symbol: null, unit: null };
+      
+      updateScoreUI();
+
+      renderColumn('col-quantity', shuffle(physicsData), 'quantity');
+      renderColumn('col-symbol', shuffle(physicsData), 'symbol');
+      renderColumn('col-unit', shuffle(physicsData), 'unit');
+    }
+
+    function updateScoreUI() {
+      document.getElementById('score-val').innerText = score;
+      document.getElementById('match-val').innerText = matchesCount;
+    }
+
+    function renderColumn(containerId, items, type) {
+      const container = document.getElementById(containerId);
+      const title = container.querySelector('h2');
+      container.innerHTML = '';
+      container.appendChild(title);
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerText = item[type];
+        card.dataset.id = item.id;
+        card.dataset.type = type;
+        card.onclick = () => selectCard(card, type);
+        container.appendChild(card);
+      });
+    }
+
+    function selectCard(card, type) {
+      if (card.classList.contains('matched')) return;
+
+      const currentSelected = card.parentElement.querySelector('.selected');
+      if (currentSelected) currentSelected.classList.remove('selected');
+
+      card.classList.add('selected');
+      selected[type] = card;
+
+      checkMatch();
+    }
+
+    function checkMatch() {
+      if (selected.quantity && selected.symbol && selected.unit) {
+        const id1 = selected.quantity.dataset.id;
+        const id2 = selected.symbol.dataset.id;
+        const id3 = selected.unit.dataset.id;
+
+        const qCard = selected.quantity;
+        const sCard = selected.symbol;
+        const uCard = selected.unit;
+
+        if (id1 === id2 && id2 === id3) {
+          // Korrekt match (+3 point)
+          qCard.className = 'card matched';
+          sCard.className = 'card matched';
+          uCard.className = 'card matched';
+
+          score += 3;
+          matchesCount++;
+          updateScoreUI();
+
+          if (matchesCount === physicsData.length) {
+            setTimeout(showEndModal, 500);
+          }
+        } else {
+          // Forkert match (-1 point)
+          qCard.classList.add('wrong');
+          sCard.classList.add('wrong');
+          uCard.classList.add('wrong');
+
+          score -= 1;
+          wrongAttempts++;
+          updateScoreUI();
+
+          setTimeout(() => {
+            qCard.classList.remove('selected', 'wrong');
+            sCard.classList.remove('selected', 'wrong');
+            uCard.classList.remove('selected', 'wrong');
+          }, 600);
+        }
+
+        selected = { quantity: null, symbol: null, unit: null };
+      }
+    }
+
+    function showEndModal() {
+      const modal = document.getElementById('end-modal');
+      const trophy = document.getElementById('trophy');
+      const medalText = document.getElementById('medal-text');
+      const heading = document.getElementById('modal-heading');
+      
+      document.getElementById('final-score').innerText = score + " / 33";
+      document.getElementById('wrong-count').innerText = wrongAttempts;
+
+      // Pointgrænser (max score er 33 point)
+      if (score >= 30) {
+        trophy.innerText = '🥇';
+        trophy.className = 'trophy-icon trophy-gold';
+        medalText.innerText = 'Guldtrofæ!';
+        medalText.className = 'medal-title gold-text';
+        heading.innerText = 'Enestående præstation!';
+      } else if (score >= 20) {
+        trophy.innerText = '🥈';
+        trophy.className = 'trophy-icon trophy-silver';
+        medalText.innerText = 'Sølvtrofæ!';
+        medalText.className = 'medal-title silver-text';
+        heading.innerText = 'Flot arbejde!';
+      } else {
+        trophy.innerText = '🥉';
+        trophy.className = 'trophy-icon trophy-bronze';
+        medalText.innerText = 'Bronzetrofæ!';
+        medalText.className = 'medal-title bronze-text';
+        heading.innerText = 'Godt kæmpet!';
+      }
+
+      modal.classList.add('active');
+    }
+
+    function closeModalAndReset() {
+      document.getElementById('end-modal').classList.remove('active');
+      initGame();
+    }
+
+    function resetGame() {
+      initGame();
+    }
+
+    // Start spillet
+    initGame();
+  </script>
+</body>
+</html>
