@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graf-Forskydning: STX B Matematik</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .custom-shadow {
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1);
+        }
+
+        #gridCanvas {
+            touch-action: none;
+            background-color: #ffffff;
+            border-radius: 1rem;
+        }
+
+        .math-text {
+            font-family: 'Cambria Math', 'Times New Roman', serif;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <!-- Navigation Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-chart-line text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-slate-900">GrafForskydning <span class="text-xs font-semibold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full ml-1">STX B</span></h1>
+                    <p class="text-xs text-slate-500 font-mono">g(x) = f(x - k) + h</p>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex items-center space-x-3 sm:space-x-4 bg-slate-50 px-3 sm:px-4 py-2 rounded-2xl border border-slate-200">
+                <div class="flex items-center space-x-1.5" title="Point">
+                    <i class="fa-solid fa-star text-amber-400 text-lg"></i>
+                    <span id="scoreText" class="font-extrabold text-slate-800 text-base">0</span>
+                </div>
+                <div class="h-4 w-px bg-slate-300"></div>
+                <div class="flex items-center space-x-1.5" title="Streak Multiplikator">
+                    <i class="fa-solid fa-fire text-orange-500 text-lg"></i>
+                    <span id="streakText" class="font-extrabold text-slate-800 text-base">0x</span>
+                </div>
+                <div class="h-4 w-px bg-slate-300"></div>
+                <button onclick="openTheoryModal()" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center space-x-1 transition">
+                    <i class="fa-solid fa-circle-question text-sm"></i>
+                    <span class="hidden sm:inline">Teori & Hjælp</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-6xl mx-auto px-4 py-6 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Canvas / Graph Display -->
+        <div class="lg:col-span-7 flex flex-col space-y-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 custom-shadow flex flex-col justify-center items-center relative">
+                
+                <!-- Graph Legend -->
+                <div class="w-full flex flex-wrap items-center justify-between mb-2 px-2 text-sm font-semibold gap-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-4 h-1 bg-blue-500 rounded-full inline-block border border-dashed border-blue-600"></span>
+                        <span class="text-slate-600">Stamfunktion: <span id="fText" class="font-bold text-blue-600">f(x) = x²</span></span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-4 h-1 bg-rose-500 rounded-full inline-block"></span>
+                        <span class="text-slate-600">Forskudt graf: <span id="gText" class="font-bold text-rose-600">g(x)</span></span>
+                    </div>
+                </div>
+
+                <!-- Canvas Container -->
+                <div class="relative w-full aspect-square max-w-[480px]">
+                    <canvas id="gridCanvas" class="w-full h-full border border-slate-200 shadow-inner"></canvas>
+                </div>
+
+                <!-- Quick Canvas Info/Hint -->
+                <p id="canvasHintText" class="text-xs text-slate-400 mt-2 text-center">
+                    Ternstørrelse = 1 enhed. Blå stiplet er f(x), rød er g(x).
+                </p>
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Panel / Game Modes -->
+        <div class="lg:col-span-5 flex flex-col space-y-4">
+
+            <!-- Mode Selector Tabs -->
+            <div class="grid grid-cols-3 gap-1 bg-slate-200/80 p-1 rounded-xl font-medium text-xs sm:text-sm">
+                <button id="tabMode1" onclick="switchMode(1)" class="py-2.5 rounded-lg font-bold transition text-slate-700 bg-white shadow-sm">
+                    1. Aflæs k & h
+                </button>
+                <button id="tabMode2" onclick="switchMode(2)" class="py-2.5 rounded-lg font-bold transition text-slate-600 hover:text-slate-900">
+                    2. Flyt Graf
+                </button>
+                <button id="tabMode3" onclick="switchMode(3)" class="py-2.5 rounded-lg font-bold transition text-slate-600 hover:text-slate-900">
+                    3. Vælg Svar
+                </button>
+            </div>
+
+            <!-- Task Container Box -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 custom-shadow flex-grow flex flex-col justify-between space-y-6">
+
+                <!-- Header for Task -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span id="taskBadge" class="text-xs font-extrabold tracking-wider uppercase px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-100">
+                            Opgave Type 1
+                        </span>
+                        <span id="taskLevel" class="text-xs text-slate-400 font-medium">STX B Niveau</span>
+                    </div>
+                    <h2 id="taskTitle" class="text-lg font-bold text-slate-900 leading-snug">
+                        Aflæs forskydningen på grafen
+                    </h2>
+                    <p id="taskDescription" class="text-sm text-slate-600 mt-1">
+                        Find værdierne af k og h i formlen g(x) = f(x - k) + h, der beskriver den røde graf.
+                    </p>
+                </div>
+
+                <!-- Dynamic Interactive Controls Area -->
+                <div id="interactiveArea" class="space-y-5 my-auto">
+                    <!-- Controls populated dynamically -->
+                </div>
+
+                <!-- Feedback & Action Button -->
+                <div class="space-y-3 pt-2 border-t border-slate-100">
+                    <!-- Feedback Message Box -->
+                    <div id="feedbackBox" class="hidden p-3.5 rounded-xl text-sm leading-relaxed border transition-all">
+                        <p id="feedbackText" class="font-medium"></p>
+                    </div>
+
+                    <!-- Primary Action Button -->
+                    <button id="actionBtn" onclick="checkAnswer()" class="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition transform active:scale-[0.99] flex items-center justify-center space-x-2">
+                        <span>Tjek Svar</span>
+                        <i class="fa-solid fa-arrow-right text-sm"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500">
+        <p>Matematik STX B-niveau | Parallelforskydning af grafer: <strong>g(x) = f(x - k) + h</strong></p>
+    </footer>
+
+    <!-- Theory Modal -->
+    <div id="theoryModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b pb-3">
+                <h3 class="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb text-amber-400"></i> Teori: g(x) = f(x - k) + h
+                </h3>
+                <button onclick="closeTheoryModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-sm text-slate-700 leading-relaxed">
+                <p class="font-semibold text-slate-900">Standardformlen for parallelforskydning af en graf er:</p>
+                
+                <div class="p-3 bg-blue-50 rounded-xl text-center font-bold text-blue-900 border border-blue-200 my-2 text-base font-mono">
+                    g(x) = f(x - k) + h
+                </div>
+
+                <div class="space-y-2">
+                    <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex items-start gap-2.5">
+                        <i class="fa-solid fa-arrow-right-long text-emerald-600 text-lg mt-0.5"></i>
+                        <div>
+                            <strong class="text-emerald-950 block text-sm">Vandret forskydning (k):</strong>
+                            <p class="text-xs text-emerald-900 mt-1">
+                                Bemærk minusset inde i parentesen <strong>(x - k)</strong>:
+                            </p>
+                            <ul class="list-disc list-inside text-xs mt-1 text-emerald-800 space-y-1">
+                                <li>Hvis <strong>k = 3</strong> &rarr; <strong>f(x - 3)</strong>: Grafen flyttes <strong>3 enheder til HØJRE</strong>.</li>
+                                <li>Hvis <strong>k = -3</strong> &rarr; f(x - (-3)) = <strong>f(x + 3)</strong>: Grafen flyttes <strong>3 enheder til VENSTRE</strong>.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-2.5">
+                        <i class="fa-solid fa-arrow-up-long text-amber-600 text-lg mt-0.5"></i>
+                        <div>
+                            <strong class="text-amber-950 block text-sm">Lodret forskydning (h):</strong>
+                            <p class="text-xs text-amber-900 mt-1">
+                                Tallet uden for parentesen flytter grafen op eller ned:
+                            </p>
+                            <ul class="list-disc list-inside text-xs mt-1 text-amber-800 space-y-1">
+                                <li>Hvis <strong>h > 0</strong> (fx +2): Grafen flyttes <strong>OP</strong>.</li>
+                                <li>Hvis <strong>h < 0</strong> (fx -2): Grafen flyttes <strong>NED</strong>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-100 text-slate-800 rounded-xl text-xs space-y-1.5 border border-slate-200">
+                    <p class="font-bold text-slate-900"><i class="fa-solid fa-brain text-blue-600"></i> Eksempel med f(x) = x²:</p>
+                    <p>Funktionen <strong>g(x) = (x - 2)² + 3</strong> har <strong>k = 2</strong> og <strong>h = 3</strong>.</p>
+                    <p>Toppunktet flyttes fra (0,0) til <strong>(2, 3)</strong> — altså 2 til højre og 3 op.</p>
+                </div>
+            </div>
+
+            <button onclick="closeTheoryModal()" class="w-full py-2.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition">
+                Forstået! Lad mig prøve
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* State Variables */
+        let currentMode = 1;
+        let score = 0;
+        let streak = 0;
+        let currentProblem = {};
+        let isAnswerChecked = false;
+        let showHelperLines = false;
+
+        // Player inputs for interactive mode (Mode 2)
+        let playerK = 0;
+        let playerH = 0;
+
+        /* Base functions for STX B */
+        const functionsList = [
+            { 
+                id: 'sq', 
+                name: 'f(x) = x²', 
+                label: 'f(x) = x²',
+                eval: x => Math.pow(x, 2),
+                keyPoint: (k, h) => ({ x: k, y: h }) // Vertex
+            },
+            { 
+                id: 'cube', 
+                name: 'f(x) = x³', 
+                label: 'f(x) = x³',
+                eval: x => Math.pow(x, 3),
+                keyPoint: (k, h) => ({ x: k, y: h }) // Inflection point
+            },
+            { 
+                id: 'sqrt', 
+                name: 'f(x) = √x', 
+                label: 'f(x) = √x',
+                eval: x => x < 0 ? NaN : Math.sqrt(x),
+                keyPoint: (k, h) => ({ x: k, y: h }) // Starting point
+            }
+        ];
+
+        /* Canvas Grid Settings */
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+        const GRID_RANGE = 6; // -6 to +6
+
+        /* Resize and setup Canvas */
+        function initCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            drawGraph();
+        }
+
+        window.addEventListener('resize', initCanvas);
+
+        /* Helper functions for Canvas math to pixels */
+        function toPixelX(x, width) {
+            return (x + GRID_RANGE) * (width / (GRID_RANGE * 2));
+        }
+
+        function toPixelY(y, height) {
+            return (GRID_RANGE - y) * (height / (GRID_RANGE * 2));
+        }
+
+        function drawGraph() {
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 1. Draw Grid
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#f1f5f9';
+
+            for (let i = -GRID_RANGE; i <= GRID_RANGE; i++) {
+                let x = toPixelX(i, w);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+
+                let y = toPixelY(i, h);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            // 2. Axes
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+
+            let yZero = toPixelY(0, h);
+            ctx.beginPath();
+            ctx.moveTo(0, yZero);
+            ctx.lineTo(w, yZero);
+            ctx.stroke();
+
+            let xZero = toPixelX(0, w);
+            ctx.beginPath();
+            ctx.moveTo(xZero, 0);
+            ctx.lineTo(xZero, h);
+            ctx.stroke();
+
+            // 3. Axis Numbers
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px Plus Jakarta Sans, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            for (let i = -GRID_RANGE; i <= GRID_RANGE; i++) {
+                if (i !== 0) {
+                    ctx.fillText(i.toString(), toPixelX(i, w), yZero + 4);
+                    ctx.fillText(i.toString(), xZero - 8, toPixelY(i, h) - 4);
+                }
+            }
+
+            if (!currentProblem.func) return;
+
+            // 4. Draw Base Function f(x) (Dashed Blue)
+            ctx.save();
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+
+            let first = true;
+            for (let px = 0; px <= w; px += 2) {
+                let x = (px / w) * (GRID_RANGE * 2) - GRID_RANGE;
+                let y = currentProblem.func.eval(x);
+                if (isNaN(y)) { first = true; continue; }
+                let py = toPixelY(y, h);
+
+                if (py >= -50 && py <= h + 50) {
+                    if (first) { ctx.moveTo(px, py); first = false; }
+                    else { ctx.lineTo(px, py); }
+                } else {
+                    first = true;
+                }
+            }
+            ctx.stroke();
+            ctx.restore();
+
+            // Mark base key point (0,0)
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.arc(toPixelX(0, w), toPixelY(0, h), 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 5. Draw Transformed Function g(x) = f(x - k) + h (Red)
+            let targetK = (currentMode === 2) ? playerK : currentProblem.k;
+            let targetH = (currentMode === 2) ? playerH : currentProblem.h;
+
+            ctx.save();
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+
+            first = true;
+            for (let px = 0; px <= w; px += 2) {
+                let x = (px / w) * (GRID_RANGE * 2) - GRID_RANGE;
+                // Formlen: g(x) = f(x - k) + h
+                let y = currentProblem.func.eval(x - targetK) + targetH;
+                if (isNaN(y)) { first = true; continue; }
+                let py = toPixelY(y, h);
+
+                if (py >= -50 && py <= h + 50) {
+                    if (first) { ctx.moveTo(px, py); first = false; }
+                    else { ctx.lineTo(px, py); }
+                } else {
+                    first = true;
+                }
+            }
+            ctx.stroke();
+
+            // Highlight Key Shift Point (k, h)
+            let keyX = targetK;
+            let keyY = targetH;
+            if (keyX >= -GRID_RANGE && keyX <= GRID_RANGE && keyY >= -GRID_RANGE && keyY <= GRID_RANGE) {
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(toPixelX(keyX, w), toPixelY(keyY, h), 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // 6. Draw Helper Vector Vector Lines (Horizontal then Vertical)
+            if (showHelperLines || (isAnswerChecked && (currentMode !== 2 || (playerK === currentProblem.k && playerH === currentProblem.h)))) {
+                ctx.save();
+                ctx.strokeStyle = '#f59e0b'; // amber-500
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+
+                let origoPx = toPixelX(0, w);
+                let origoPy = toPixelY(0, h);
+                let keyPx = toPixelX(currentProblem.k, w);
+                let keyPy = toPixelY(currentProblem.h, h);
+
+                ctx.beginPath();
+                ctx.moveTo(origoPx, origoPy);
+                ctx.lineTo(keyPx, origoPy); // Horizontal vector (k)
+                ctx.lineTo(keyPx, keyPy);  // Vertical vector (h)
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        function getRandomInt(min, max, excludeZero = false) {
+            let val = 0;
+            do {
+                val = Math.floor(Math.random() * (max - min + 1)) + min;
+            } while (excludeZero && val === 0);
+            return val;
+        }
+
+        function generateProblem() {
+            isAnswerChecked = false;
+            showHelperLines = false;
+            hideFeedback();
+
+            // High frequency of f(x) = x^2 (70%)
+            let func;
+            if (Math.random() < 0.7) {
+                func = functionsList[0];
+            } else {
+                func = functionsList[Math.floor(Math.random() * functionsList.length)];
+            }
+
+            const k = getRandomInt(-3, 3, true);
+            const h = getRandomInt(-3, 3, true);
+
+            currentProblem = { func, k, h };
+
+            // Reset interactive player values
+            playerK = 0;
+            playerH = 0;
+
+            // Render clear HTML labels
+            document.getElementById('fText').innerText = func.label;
+            
+            let eqStr = getMathEquation(func, k, h);
+            document.getElementById('gText').innerText = eqStr;
+
+            setupUIForMode();
+            drawGraph();
+        }
+
+        // Generate clean text representation of g(x) = f(x - k) + h
+        function getMathEquation(func, k, h) {
+            let innerStr = "";
+            
+            // Format inside (x - k)
+            if (k > 0) {
+                innerStr = `x - ${k}`;
+            } else if (k < 0) {
+                innerStr = `x + ${Math.abs(k)}`;
+            } else {
+                innerStr = `x`;
+            }
+
+            // Format outside + h
+            let hStr = "";
+            if (h > 0) {
+                hStr = ` + ${h}`;
+            } else if (h < 0) {
+                hStr = ` - ${Math.abs(h)}`;
+            }
+
+            let mainFunc = "";
+            if (func.id === 'sq') {
+                mainFunc = `(${innerStr})²`;
+            } else if (func.id === 'cube') {
+                mainFunc = `(${innerStr})³`;
+            } else if (func.id === 'sqrt') {
+                mainFunc = `√(${innerStr})`;
+            }
+
+            return `g(x) = ${mainFunc}${hStr}`;
+        }
+
+        function setupUIForMode() {
+            const container = document.getElementById('interactiveArea');
+            container.innerHTML = '';
+
+            const actionBtn = document.getElementById('actionBtn');
+            actionBtn.innerHTML = `<span>Tjek Svar</span><i class="fa-solid fa-arrow-right text-sm"></i>`;
+            actionBtn.className = "w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition transform active:scale-[0.99] flex items-center justify-center space-x-2";
+
+            if (currentMode === 1) {
+                // Mode 1: Read k and h from graph
+                document.getElementById('taskTitle').innerText = "Aflæs forskydningen k og h";
+                document.getElementById('taskDescription').innerHTML = `Aflæs værdierne for <strong>k</strong> og <strong>h</strong> ud fra formlen <strong>g(x) = f(x - k) + h</strong> for den røde graf.`;
+
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-bold text-slate-700 uppercase">Værdi for k (vandret):</label>
+                                <span id="valK" class="w-8 text-center font-bold text-base bg-blue-50 text-blue-700 py-0.5 rounded border border-blue-200">0</span>
+                            </div>
+                            <input type="range" id="inputK" min="-4" max="4" value="0" step="1" 
+                                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                oninput="document.getElementById('valK').innerText = this.value">
+                            <span class="text-[11px] text-slate-500 mt-1 block">k > 0 forskyder til HØJRE, k < 0 til VENSTRE.</span>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-bold text-slate-700 uppercase">Værdi for h (lodret):</label>
+                                <span id="valH" class="w-8 text-center font-bold text-base bg-blue-50 text-blue-700 py-0.5 rounded border border-blue-200">0</span>
+                            </div>
+                            <input type="range" id="inputH" min="-4" max="4" value="0" step="1" 
+                                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                oninput="document.getElementById('valH').innerText = this.value">
+                            <span class="text-[11px] text-slate-500 mt-1 block">h > 0 forskyder OP, h < 0 forskyder NED.</span>
+                        </div>
+                    </div>
+                `;
+            } else if (currentMode === 2) {
+                // Mode 2: Interactive Move Graph
+                document.getElementById('taskTitle').innerText = "Flyt den røde graf";
+                document.getElementById('taskDescription').innerHTML = `Flyt den røde graf, så den matcher forskriften:<br><strong class="text-rose-600 font-bold text-base font-mono block mt-1" id="targetEquation"></strong>`;
+
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <p class="text-xs text-slate-500 text-center font-medium">Brug piletasterne eller knapperne til at flytte grafen:</p>
+                        <div class="grid grid-cols-3 gap-2 max-w-[220px] mx-auto">
+                            <div></div>
+                            <button onclick="moveGraph(0, 1)" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition shadow-sm active:bg-slate-300">
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </button>
+                            <div></div>
+                            
+                            <button onclick="moveGraph(-1, 0)" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition shadow-sm active:bg-slate-300" title="Venstre (k mindskes)">
+                                <i class="fa-solid fa-arrow-left"></i>
+                            </button>
+                            <button onclick="resetGraphPos()" class="p-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-xl font-semibold text-xs transition" title="Nulstil">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                            <button onclick="moveGraph(1, 0)" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition shadow-sm active:bg-slate-300" title="Højre (k øges)">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+
+                            <div></div>
+                            <button onclick="moveGraph(0, -1)" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition shadow-sm active:bg-slate-300">
+                                <i class="fa-solid fa-arrow-down"></i>
+                            </button>
+                            <div></div>
+                        </div>
+
+                        <div class="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center text-xs text-slate-600 font-mono">
+                            Din grafs forskydning: <span class="font-bold text-slate-800">k = ${playerK}, h = ${playerH}</span>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('targetEquation').innerText = getMathEquation(currentProblem.func, currentProblem.k, currentProblem.h);
+
+            } else if (currentMode === 3) {
+                // Mode 3: Multiple Choice Quiz
+                document.getElementById('taskTitle').innerText = "Vælg den rigtige forskrift";
+                document.getElementById('taskDescription').innerHTML = `Hvilken forskrift gælder for den forskudte røde graf g(x)?`;
+
+                const correctEq = getMathEquation(currentProblem.func, currentProblem.k, currentProblem.h);
+                const options = [correctEq];
+
+                // Distractors with common sign mistakes
+                options.push(getMathEquation(currentProblem.func, -currentProblem.k, currentProblem.h));
+                options.push(getMathEquation(currentProblem.func, currentProblem.k, -currentProblem.h));
+                options.push(getMathEquation(currentProblem.func, -currentProblem.k, -currentProblem.h));
+
+                // Remove potential duplicates
+                const uniqueOptions = [...new Set(options)];
+                while(uniqueOptions.length < 4) {
+                    uniqueOptions.push(getMathEquation(currentProblem.func, currentProblem.k + 1, currentProblem.h));
+                }
+
+                const shuffled = uniqueOptions.sort(() => Math.random() - 0.5);
+
+                let optionsHTML = '<div class="space-y-2.5">';
+                shuffled.forEach((opt) => {
+                    optionsHTML += `
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                            <input type="radio" name="quizOption" value="${opt}" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-3 text-sm font-semibold font-mono text-slate-800">${opt}</span>
+                        </label>
+                    `;
+                });
+                optionsHTML += '</div>';
+
+                container.innerHTML = optionsHTML;
+            }
+        }
+
+        function getShiftDescription(k, h) {
+            let kDir = k > 0 ? `${k} enhed(er) mod HØJRE` : `${Math.abs(k)} enhed(er) mod VENSTRE`;
+            let hDir = h > 0 ? `${h} enhed(er) OP` : `${Math.abs(h)} enhed(er) NED`;
+            return `${kDir} og ${hDir}`;
+        }
+
+        function moveGraph(dk, dh) {
+            if (isAnswerChecked) return;
+            playerK += dk;
+            playerH += dh;
+            setupUIForMode();
+            drawGraph();
+        }
+
+        function resetGraphPos() {
+            if (isAnswerChecked) return;
+            playerK = 0;
+            playerH = 0;
+            setupUIForMode();
+            drawGraph();
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+
+            [1, 2, 3].forEach(m => {
+                const tab = document.getElementById(`tabMode${m}`);
+                if (m === mode) {
+                    tab.className = "py-2.5 rounded-lg font-bold transition text-slate-900 bg-white shadow-sm";
+                } else {
+                    tab.className = "py-2.5 rounded-lg font-bold transition text-slate-600 hover:text-slate-900";
+                }
+            });
+
+            document.getElementById('taskBadge').innerText = `Opgave Type ${mode}`;
+            generateProblem();
+        }
+
+        function checkAnswer() {
+            if (isAnswerChecked) {
+                generateProblem();
+                return;
+            }
+
+            let isCorrect = false;
+            let explanation = "";
+
+            if (currentMode === 1) {
+                const ansK = parseInt(document.getElementById('inputK').value);
+                const ansH = parseInt(document.getElementById('inputH').value);
+
+                isCorrect = (ansK === currentProblem.k && ansH === currentProblem.h);
+
+                let shiftDesc = getShiftDescription(currentProblem.k, currentProblem.h);
+                explanation = `Grafen er flyttet <strong>${shiftDesc}</strong>.<br>I formlen g(x) = f(x - k) + h svarer det til <strong>k = ${currentProblem.k}</strong> og <strong>h = ${currentProblem.h}</strong>.`;
+
+            } else if (currentMode === 2) {
+                isCorrect = (playerK === currentProblem.k && playerH === currentProblem.h);
+
+                let shiftDesc = getShiftDescription(currentProblem.k, currentProblem.h);
+                explanation = `Målet var at flytte grafen <strong>${shiftDesc}</strong> (k = ${currentProblem.k}, h = ${currentProblem.h}).`;
+
+            } else if (currentMode === 3) {
+                const selected = document.querySelector('input[name="quizOption"]:checked');
+                if (!selected) {
+                    showFeedback("Vælg venligst en af forskrifterne først!", "warning");
+                    return;
+                }
+
+                const correctEq = getMathEquation(currentProblem.func, currentProblem.k, currentProblem.h);
+                isCorrect = (selected.value === correctEq);
+
+                let shiftDesc = getShiftDescription(currentProblem.k, currentProblem.h);
+                explanation = `Grafen er forskudt ${shiftDesc}, som giver forskriften <strong>${correctEq}</strong>.`;
+            }
+
+            isAnswerChecked = true;
+            showHelperLines = true;
+
+            if (isCorrect) {
+                score += 10 + (streak * 2);
+                streak++;
+                showFeedback(`<strong>Super flot klaret! 🎉</strong><br>${explanation}`, "success");
+            } else {
+                streak = 0;
+                showFeedback(`<strong>Ikke helt rigtigt. 💡</strong><br>${explanation}`, "error");
+            }
+
+            document.getElementById('scoreText').innerText = score;
+            document.getElementById('streakText').innerText = `${streak}x`;
+
+            const actionBtn = document.getElementById('actionBtn');
+            actionBtn.innerHTML = `<span>Næste Opgave</span><i class="fa-solid fa-circle-arrow-right text-sm"></i>`;
+            actionBtn.className = "w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 transition transform active:scale-[0.99] flex items-center justify-center space-x-2";
+
+            drawGraph();
+        }
+
+        function showFeedback(msg, type) {
+            const box = document.getElementById('feedbackBox');
+            const txt = document.getElementById('feedbackText');
+
+            box.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-900', 'bg-rose-50', 'border-rose-200', 'text-rose-900', 'bg-amber-50', 'border-amber-200', 'text-amber-900');
+
+            if (type === 'success') {
+                box.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-900');
+            } else if (type === 'error') {
+                box.classList.add('bg-rose-50', 'border-rose-200', 'text-rose-900');
+            } else {
+                box.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-900');
+            }
+
+            txt.innerHTML = msg;
+        }
+
+        function hideFeedback() {
+            document.getElementById('feedbackBox').classList.add('hidden');
+        }
+
+        function openTheoryModal() {
+            document.getElementById('theoryModal').classList.remove('hidden');
+        }
+
+        function closeTheoryModal() {
+            document.getElementById('theoryModal').classList.add('hidden');
+        }
+
+        // Add keyboard arrow key control for Mode 2
+        window.addEventListener('keydown', (e) => {
+            if (currentMode !== 2 || isAnswerChecked) return;
+            if (e.key === 'ArrowUp') moveGraph(0, 1);
+            else if (e.key === 'ArrowDown') moveGraph(0, -1);
+            else if (e.key === 'ArrowLeft') moveGraph(-1, 0);
+            else if (e.key === 'ArrowRight') moveGraph(1, 0);
+        });
+
+        /* Initialization on Load */
+        window.onload = function() {
+            initCanvas();
+            generateProblem();
+        };
+    </script>
+</body>
+</html>
