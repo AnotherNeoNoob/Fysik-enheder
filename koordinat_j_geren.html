@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koordinat-Jægeren: Den Skjulte Skat</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #f8fafc;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .arcade-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+        .glow-text {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(147, 51, 234, 0.6);
+        }
+        .glow-box {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.25);
+        }
+        canvas {
+            touch-action: none;
+            background-color: #030712;
+            border-radius: 12px;
+            box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.9), 0 0 15px rgba(99, 102, 241, 0.25);
+        }
+        /* Custom Arcade Buttons */
+        .btn-arcade {
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 0 #1e293b;
+        }
+        .btn-arcade:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #1e293b;
+        }
+        .btn-action {
+            box-shadow: 0 4px 0 #3730a3;
+        }
+        .btn-action:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #3730a3;
+        }
+        .radar-pulse {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        .music-pulse {
+            animation: musicPulse 1s infinite alternate ease-in-out;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        @keyframes musicPulse {
+            0% { filter: drop-shadow(0 0 2px rgba(236, 72, 153, 0.4)); }
+            100% { filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.9)); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4 overflow-x-hidden">
+
+    <!-- Header Section -->
+    <header class="w-full max-w-4xl flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-4 rounded-xl border border-indigo-900/50 glow-box my-1">
+        <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-indigo-600 rounded-xl text-2xl text-yellow-300 shadow-lg shadow-indigo-500/30">
+                <i class="fa-solid fa-gem"></i>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-fuchsia-400">
+                    KOORDINAT-JÆGEREN
+                </h1>
+                <p class="text-xs text-indigo-300 font-medium">Find den SKJULTE skat før tiden udløber!</p>
+            </div>
+        </div>
+
+        <!-- Audio, Pause & Help Controls -->
+        <div class="flex items-center gap-2">
+            <button id="musicToggle" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700">
+                <i id="musicIcon" class="fa-solid fa-music text-pink-400 music-pulse"></i>
+                <span id="musicText" class="hidden sm:inline">Musik Til</span>
+            </button>
+            <button id="soundToggle" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-emerald-400"></i>
+                <span id="soundText" class="hidden sm:inline">SFX Til</span>
+            </button>
+            <button id="pauseBtn" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700">
+                <i id="pauseIcon" class="fa-solid fa-pause text-amber-400"></i>
+                <span id="pauseText" class="hidden sm:inline">Pause</span>
+            </button>
+            <button id="helpBtn" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700">
+                <i class="fa-solid fa-circle-question text-sky-400"></i>
+                <span class="hidden sm:inline">Hjælp</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-4xl flex flex-col items-center gap-3 relative">
+        
+        <!-- Top Info HUD / Target Prompt -->
+        <div class="w-full bg-slate-900/95 border-2 border-indigo-600/50 rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+            
+            <!-- Objective Prompt (Hidden Treasure Coordinates) -->
+            <div class="flex items-center gap-3 bg-gradient-to-r from-indigo-950 to-slate-900 px-4 py-2.5 rounded-xl border border-indigo-500/50 shadow-inner">
+                <div class="relative">
+                    <i class="fa-solid fa-map-location-dot text-yellow-400 text-2xl animate-bounce"></i>
+                    <i class="fa-solid fa-question absolute -top-1 -right-1 text-xs text-red-400 font-black"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] text-indigo-300 block font-bold uppercase tracking-wider">Skjult Skat Placering:</span>
+                    <span id="targetCoord" class="text-xl sm:text-2xl font-black text-yellow-300 arcade-font tracking-widest">
+                        (X: ?, Y: ?)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Stats Bar (Score, Level, Lives, Timer) -->
+            <div class="flex items-center gap-3 sm:gap-6 flex-wrap justify-between sm:justify-end flex-1">
+                <!-- Score -->
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 block uppercase font-bold">Point</span>
+                    <span id="scoreDisplay" class="text-lg font-black text-emerald-400 arcade-font">0</span>
+                </div>
+
+                <!-- Level -->
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 block uppercase font-bold">Niveau</span>
+                    <span id="levelDisplay" class="text-lg font-black text-fuchsia-400 arcade-font">1</span>
+                </div>
+
+                <!-- Hearts/Lives -->
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 block uppercase font-bold">Liv</span>
+                    <div id="livesContainer" class="flex gap-1 text-red-500 text-base">
+                        <i class="fa-solid fa-heart"></i>
+                        <i class="fa-solid fa-heart"></i>
+                        <i class="fa-solid fa-heart"></i>
+                    </div>
+                </div>
+
+                <!-- Timer Gauge -->
+                <div class="w-24 sm:w-32">
+                    <div class="flex justify-between text-[10px] text-slate-400 mb-1 font-bold">
+                        <span>Tid</span>
+                        <span id="timerText" class="text-amber-400">15s</span>
+                    </div>
+                    <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                        <div id="timerBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-full rounded-full transition-all duration-100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen Canvas Area -->
+        <div class="relative w-full aspect-square max-w-[580px] flex justify-center items-center">
+            <canvas id="gameCanvas" width="600" height="600" class="w-full h-full border-2 border-indigo-900/60"></canvas>
+
+            <!-- Start / Game Over / Pause Overlays -->
+            <div id="overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md rounded-xl flex flex-col items-center justify-center p-6 text-center z-10 transition-all">
+                
+                <!-- Start Screen -->
+                <div id="startScreen" class="flex flex-col items-center gap-4 max-w-md">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg text-3xl text-white mb-1 shadow-indigo-500/40">
+                        <i class="fa-solid fa-mask"></i>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-black text-white tracking-wide">DEN SKJULTE SKAT</h2>
+                    <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                        Skatten er <strong class="text-yellow-400">USYNLIG</strong> på kortet! Du skal aflæse koordinaterne øverst og navigate din helt over på feltet.
+                    </p>
+                    
+                    <div class="bg-slate-900/90 p-3 rounded-xl border border-indigo-900/50 text-xs text-left w-full space-y-1.5 shadow-inner">
+                        <p><strong class="text-cyan-400">X-Akse (Vandret):</strong> Højre er positive (+), Venstre er negative (-)</p>
+                        <p><strong class="text-emerald-400">Y-Akse (Lodret):</strong> Op er positive (+), Ned er negative (-)</p>
+                        <p><strong class="text-amber-400">Sonar Radar:</strong> Hjælper med at mærke om du er varm eller kold!</p>
+                    </div>
+
+                    <button id="startBtn" class="mt-2 w-full py-4 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white font-black rounded-xl text-base transition btn-action tracking-wider shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> START SPILLET
+                    </button>
+                </div>
+
+                <!-- Game Over Screen -->
+                <div id="gameOverScreen" class="hidden flex flex-col items-center gap-4 max-w-md">
+                    <div class="w-16 h-16 bg-red-500/20 text-red-500 border border-red-500/40 rounded-2xl flex items-center justify-center text-3xl mb-1 animate-bounce">
+                        <i class="fa-solid fa-skull-crossbones"></i>
+                    </div>
+                    <h2 class="text-3xl font-black text-red-400 tracking-wider">GAME OVER</h2>
+                    <p id="gameOverReason" class="text-slate-300 text-sm font-medium">Du løb tør for tid!</p>
+                    
+                    <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 w-full flex justify-around shadow-inner">
+                        <div>
+                            <span class="text-[10px] text-slate-400 uppercase font-bold block">Din Score</span>
+                            <span id="finalScore" class="text-2xl font-black text-yellow-400 arcade-font">0</span>
+                        </div>
+                        <div class="border-r border-slate-800"></div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 uppercase font-bold block">Highscore</span>
+                            <span id="highScore" class="text-2xl font-black text-emerald-400 arcade-font">0</span>
+                        </div>
+                    </div>
+
+                    <button id="restartBtn" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl text-base transition btn-action flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> PRØV IGEN
+                    </button>
+                </div>
+
+                <!-- Pause Overlay -->
+                <div id="pauseScreen" class="hidden flex flex-col items-center gap-4 max-w-md">
+                    <div class="w-16 h-16 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-2xl flex items-center justify-center text-3xl mb-1">
+                        <i class="fa-solid fa-pause"></i>
+                    </div>
+                    <h2 class="text-3xl font-black text-amber-400 tracking-wider">PAUSET</h2>
+                    <p class="text-slate-300 text-sm">Spillet er sat på pause.</p>
+                    <button id="resumeBtn" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-base transition btn-action flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> FORTSÆT SPIL
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Proximity Sonar Radar Bar -->
+        <div class="w-full bg-slate-900/90 p-3 rounded-xl border border-indigo-950 flex items-center justify-between gap-3 shadow-md">
+            <div class="flex items-center gap-2">
+                <div id="sonarDot" class="w-3.5 h-3.5 rounded-full bg-slate-600"></div>
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Skatte-Radar:</span>
+            </div>
+            <div id="sonarText" class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                Søger efter signal...
+            </div>
+            <div class="w-28 sm:w-36 bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+                <div id="sonarBar" class="bg-slate-700 h-full w-0 transition-all duration-300"></div>
+            </div>
+        </div>
+
+        <!-- Controls Section (Input Jump & On-screen D-Pad) -->
+        <div class="w-full flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+            
+            <!-- Direct Coordinate Jump -->
+            <div class="w-full md:w-auto flex-1 flex flex-col sm:flex-row items-center gap-2">
+                <span class="text-xs text-slate-400 font-bold whitespace-nowrap">Teleportér (X, Y):</span>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <div class="relative flex-1 sm:w-20">
+                        <span class="absolute left-2.5 top-2 text-xs text-cyan-400 font-black">X:</span>
+                        <input type="number" id="inputX" min="-10" max="10" placeholder="0" class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div class="relative flex-1 sm:w-20">
+                        <span class="absolute left-2.5 top-2 text-xs text-emerald-400 font-black">Y:</span>
+                        <input type="number" id="inputY" min="-10" max="10" placeholder="0" class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <button id="jumpBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold rounded-lg transition btn-action flex items-center gap-1.5">
+                        <i class="fa-solid fa-bolt"></i> HOP
+                    </button>
+                </div>
+            </div>
+
+            <!-- On-Screen Touch D-Pad -->
+            <div class="flex flex-col items-center gap-1 select-none">
+                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5 sm:hidden">Styring</span>
+                <div class="grid grid-cols-3 gap-1 w-36 h-36">
+                    <div></div>
+                    <button id="btnUp" class="bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl flex items-center justify-center text-lg text-emerald-400 btn-arcade active:scale-95 transition">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                    <div></div>
+                    <button id="btnLeft" class="bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl flex items-center justify-center text-lg text-cyan-400 btn-arcade active:scale-95 transition">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div class="bg-slate-950/60 rounded-xl border border-slate-800/80 flex items-center justify-center text-[10px] text-indigo-400 font-bold">0,0</div>
+                    <button id="btnRight" class="bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl flex items-center justify-center text-lg text-cyan-400 btn-arcade active:scale-95 transition">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    <div></div>
+                    <button id="btnDown" class="bg-slate-800 hover:bg-slate-700 active:bg-indigo-600 border border-slate-700 rounded-xl flex items-center justify-center text-lg text-emerald-400 btn-arcade active:scale-95 transition">
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </button>
+                    <div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Help / Instructions -->
+    <div id="helpModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-indigo-900/60 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-indigo-400"></i> Sådan spiller du
+                </h3>
+                <button id="closeHelpBtn" class="text-slate-400 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p><strong>1. Skatten er Skjult:</strong> Skatten kan IKKE ses på banen. Læs koordinatet øverst til venstre: <strong class="text-yellow-400">(X, Y)</strong>.</p>
+                <p><strong>2. X-Aksen (Blå Vandret Line):</strong> Start i midten (0). Gå til <strong>højre</strong> for positive tal (+X) og <strong>venstre</strong> for negative tal (-X).</p>
+                <p><strong>3. Y-Aksen (Grøn Lodret Line):</strong> Gå <strong>op</strong> for positive tal (+Y) og <strong>ned</strong> for negative tal (-Y).</p>
+                <p><strong>4. Styring:</strong> Brug <strong>Piletaster / WASD</strong>, klik direkte på koordinat-gitteret, brug D-Paddet eller skriv koordinaterne og tryk HOP.</p>
+                <p><strong>5. Sonar Radar:</strong> Hold øje med radaren nederst! Den lyser RØD ("GLØDENDE"), når du står lige ved siden af skatten.</p>
+                <p><strong>6. Pas på:</strong> Undgå <strong class="text-fuchsia-400">Spøgelser</strong> og <strong class="text-slate-400">Sten</strong>. Tiden bliver hurtigere for hvert level!</p>
+            </div>
+
+            <button id="closeHelpModalBtn" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition">
+                Forstået!
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Logic -->
+    <script>
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.sfxMuted = false;
+                this.musicMuted = false;
+                this.isPlayingMusic = false;
+                this.musicStep = 0;
+                this.nextNoteTime = 0;
+                this.schedulerTimer = null;
+                this.tempoBpm = 135;
+                
+                // Key of A Minor Retro Synth Chords & Melodies
+                this.bassLine = [
+                    220.00, 220.00, 440.00, 220.00, 220.00, 330.00, 220.00, 220.00,
+                    174.61, 174.61, 349.23, 174.61, 174.61, 261.63, 174.61, 174.61,
+                    146.83, 146.83, 293.66, 146.83, 146.83, 220.00, 146.83, 146.83,
+                    164.81, 164.81, 329.63, 164.81, 207.65, 329.63, 246.94, 329.63
+                ];
+
+                this.melodyLine = [
+                    523.25, 0, 659.25, 783.99, 880.00, 0, 783.99, 659.25,
+                    436.04, 0, 523.25, 659.25, 698.46, 0, 659.25, 523.25,
+                    587.33, 0, 698.46, 880.00, 880.00, 783.99, 698.46, 587.33,
+                    659.25, 0, 830.61, 987.77, 1046.50, 987.77, 830.61, 659.25
+                ];
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        this.ctx = new AudioContextClass();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume().catch(() => {});
+                }
+            }
+
+            playTone(freq, type, duration, vol = 0.08) {
+                if (this.sfxMuted || !this.ctx || freq <= 0) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+
+            playMove() {
+                this.playTone(320, 'triangle', 0.04, 0.06);
+            }
+
+            playSonarPing(pitch) {
+                this.playTone(350 + (pitch * 120), 'sine', 0.08, 0.09);
+            }
+
+            playCollect() {
+                if (this.sfxMuted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.07);
+                    osc.frequency.setValueAtTime(783.99, now + 0.14);
+                    osc.frequency.setValueAtTime(1046.50, now + 0.21);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.35);
+                } catch(e) {}
+            }
+
+            playHit() {
+                this.playTone(110, 'sawtooth', 0.25, 0.12);
+            }
+
+            playLevelUp() {
+                if (this.sfxMuted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(880, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.3);
+                } catch(e) {}
+            }
+
+            setTempo(bpm) {
+                this.tempoBpm = bpm;
+            }
+
+            startMusic() {
+                if (this.musicMuted || this.isPlayingMusic) return;
+                this.init();
+                if (!this.ctx) return;
+
+                this.isPlayingMusic = true;
+                this.musicStep = 0;
+                this.nextNoteTime = this.ctx.currentTime + 0.05;
+
+                this.schedulerTimer = setInterval(() => this.scheduleMusic(), 25);
+            }
+
+            stopMusic() {
+                this.isPlayingMusic = false;
+                if (this.schedulerTimer) {
+                    clearInterval(this.schedulerTimer);
+                    this.schedulerTimer = null;
+                }
+            }
+
+            scheduleMusic() {
+                if (!this.isPlayingMusic || !this.ctx || this.musicMuted) return;
+
+                const secondsPer16th = (60 / this.tempoBpm) / 4;
+                while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
+                    this.playMusicStep(this.nextNoteTime);
+                    this.nextNoteTime += secondsPer16th;
+                    this.musicStep = (this.musicStep + 1) % 32;
+                }
+            }
+
+            playMusicStep(time) {
+                if (this.musicMuted || !this.ctx) return;
+
+                const step = this.musicStep;
+
+                // Bass
+                const bassFreq = this.bassLine[step];
+                if (bassFreq > 0) {
+                    try {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(bassFreq / 2, time);
+                        gain.gain.setValueAtTime(0.03, time);
+                        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(time);
+                        osc.stop(time + 0.12);
+                    } catch(e) {}
+                }
+
+                // Lead Melody
+                const melFreq = this.melodyLine[step];
+                if (melFreq > 0 && step % 2 === 0) {
+                    try {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(melFreq, time);
+                        gain.gain.setValueAtTime(0.04, time);
+                        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(time);
+                        osc.stop(time + 0.18);
+                    } catch(e) {}
+                }
+
+                // Percussion
+                if (step % 4 === 2 && !this.sfxMuted) {
+                    this.playTone(800 + Math.random() * 400, 'sawtooth', 0.02, 0.012);
+                }
+            }
+        }
+
+        const audio = new AudioEngine();
+
+        const GRID_SIZE = 10; // Cartesian (-10 to +10)
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let isPlaying = false;
+        let isPaused = false;
+        let score = 0;
+        let level = 1;
+        let lives = 3;
+        let maxTime = 16;
+        let timeLeft = 16;
+        let timerInterval = null;
+
+        const player = {
+            x: 0,
+            y: 0,
+            renderX: 0,
+            renderY: 0
+        };
+
+        let target = { x: 0, y: 0 };
+        let rocks = [];
+        let ghosts = [];
+
+        function gridToPixel(gx, gy) {
+            const padding = 36;
+            const usableWidth = canvas.width - (padding * 2);
+            const usableHeight = canvas.height - (padding * 2);
+            const stepX = usableWidth / (GRID_SIZE * 2);
+            const stepY = usableHeight / (GRID_SIZE * 2);
+
+            const px = canvas.width / 2 + (gx * stepX);
+            const py = canvas.height / 2 - (gy * stepY);
+            return { x: px, y: py, stepX, stepY };
+        }
+
+        function pixelToGrid(px, py) {
+            const padding = 36;
+            const usableWidth = canvas.width - (padding * 2);
+            const usableHeight = canvas.height - (padding * 2);
+            const stepX = usableWidth / (GRID_SIZE * 2);
+            const stepY = usableHeight / (GRID_SIZE * 2);
+
+            const gx = Math.round((px - canvas.width / 2) / stepX);
+            const gy = Math.round((canvas.height / 2 - py) / stepY);
+
+            return {
+                x: Math.max(-GRID_SIZE, Math.min(GRID_SIZE, gx)),
+                y: Math.max(-GRID_SIZE, Math.min(GRID_SIZE, gy))
+            };
+        }
+
+        function initGame() {
+            score = 0;
+            level = 1;
+            lives = 3;
+            player.x = 0;
+            player.y = 0;
+            
+            const p = gridToPixel(0, 0);
+            player.renderX = p.x;
+            player.renderY = p.y;
+
+            updateHUD();
+            startLevel();
+            audio.startMusic();
+        }
+
+        function startLevel() {
+            maxTime = Math.max(6, 18 - Math.floor(level * 0.95));
+            timeLeft = maxTime;
+
+            audio.setTempo(Math.min(185, 130 + (level * 4)));
+
+            spawnTarget();
+            spawnHazards();
+            updateSonarMeter();
+
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 100);
+
+            updateHUD();
+        }
+
+        function spawnTarget() {
+            let valid = false;
+            let attempts = 0;
+            while (!valid && attempts < 200) {
+                attempts++;
+                const rx = Math.floor(Math.random() * (GRID_SIZE * 2 + 1)) - GRID_SIZE;
+                const ry = Math.floor(Math.random() * (GRID_SIZE * 2 + 1)) - GRID_SIZE;
+
+                if (rx !== player.x || ry !== player.y) {
+                    target.x = rx;
+                    target.y = ry;
+                    valid = true;
+                }
+            }
+            document.getElementById('targetCoord').innerText = `(X: ${target.x}, Y: ${target.y})`;
+        }
+
+        function spawnHazards() {
+            rocks = [];
+            ghosts = [];
+
+            const numRocks = Math.min(16, 3 + Math.floor(level * 1.4));
+            const numGhosts = Math.min(8, 1 + Math.floor(level * 0.7));
+
+            for (let i = 0; i < numRocks; i++) {
+                let rx, ry, attempts = 0;
+                do {
+                    rx = Math.floor(Math.random() * (GRID_SIZE * 2 + 1)) - GRID_SIZE;
+                    ry = Math.floor(Math.random() * (GRID_SIZE * 2 + 1)) - GRID_SIZE;
+                    attempts++;
+                } while (
+                    ((rx === 0 && ry === 0) || 
+                    (rx === target.x && ry === target.y) ||
+                    (rx === player.x && ry === player.y) ||
+                    rocks.some(r => r.x === rx && r.y === ry)) && attempts < 80
+                );
+                if (attempts < 80) rocks.push({ x: rx, y: ry });
+            }
+
+            for (let i = 0; i < numGhosts; i++) {
+                let gx, gy, attempts = 0;
+                do {
+                    gx = Math.floor(Math.random() * (GRID_SIZE * 2 + 1)) - GRID_SIZE;
+                    gy = Math.floor(Math.random() * (GRID_SIZE * 2 + 1)) - GRID_SIZE;
+                    attempts++;
+                } while (
+                    ((Math.abs(gx - player.x) < 3 && Math.abs(gy - player.y) < 3) ||
+                    (gx === target.x && gy === target.y)) && attempts < 80
+                );
+
+                const axisHorizontal = Math.random() < 0.5;
+                ghosts.push({
+                    x: gx,
+                    y: gy,
+                    vx: axisHorizontal ? (Math.random() < 0.5 ? 1 : -1) : 0,
+                    vy: !axisHorizontal ? (Math.random() < 0.5 ? 1 : -1) : 0,
+                    moveTimer: 0,
+                    speed: Math.max(5, 16 - level)
+                });
+            }
+        }
+
+        function movePlayer(dx, dy) {
+            if (!isPlaying || isPaused) return;
+
+            const newX = Math.max(-GRID_SIZE, Math.min(GRID_SIZE, player.x + dx));
+            const newY = Math.max(-GRID_SIZE, Math.min(GRID_SIZE, player.y + dy));
+
+            if (rocks.some(r => r.x === newX && r.y === newY)) {
+                audio.playHit();
+                return;
+            }
+
+            player.x = newX;
+            player.y = newY;
+            audio.playMove();
+
+            updateSonarMeter();
+            checkCollisions();
+        }
+
+        function jumpToCoordinate(x, y) {
+            if (!isPlaying || isPaused) return;
+            const targetX = Math.max(-GRID_SIZE, Math.min(GRID_SIZE, x));
+            const targetY = Math.max(-GRID_SIZE, Math.min(GRID_SIZE, y));
+
+            if (rocks.some(r => r.x === targetX && r.y === targetY)) {
+                audio.playHit();
+                return;
+            }
+
+            player.x = targetX;
+            player.y = targetY;
+            audio.playMove();
+
+            updateSonarMeter();
+            checkCollisions();
+        }
+
+        function updateSonarMeter() {
+            const dist = Math.hypot(player.x - target.x, player.y - target.y);
+            const maxDist = GRID_SIZE * 2.8;
+            
+            const sonarDot = document.getElementById('sonarDot');
+            const sonarText = document.getElementById('sonarText');
+            const sonarBar = document.getElementById('sonarBar');
+
+            const pct = Math.max(0, Math.min(100, 100 - (dist / maxDist * 100)));
+            sonarBar.style.width = `${pct}%`;
+
+            if (dist === 0) {
+                sonarText.innerText = "SKATTEN ER LIGE HER!";
+                sonarText.className = "text-xs font-black text-emerald-400 uppercase tracking-wider";
+                sonarBar.className = "bg-emerald-400 h-full w-full transition-all duration-200";
+                sonarDot.className = "w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping";
+            } else if (dist <= 2) {
+                sonarText.innerText = "GLØDENDE VARM!";
+                sonarText.className = "text-xs font-black text-red-400 uppercase tracking-wider animate-pulse";
+                sonarBar.className = "bg-red-500 h-full transition-all duration-200";
+                sonarDot.className = "w-3.5 h-3.5 rounded-full bg-red-500 radar-pulse";
+                audio.playSonarPing(3);
+            } else if (dist <= 5) {
+                sonarText.innerText = "Varm!";
+                sonarText.className = "text-xs font-extrabold text-amber-400 uppercase tracking-wider";
+                sonarBar.className = "bg-amber-400 h-full transition-all duration-200";
+                sonarDot.className = "w-3.5 h-3.5 rounded-full bg-amber-400";
+                audio.playSonarPing(2);
+            } else if (dist <= 9) {
+                sonarText.innerText = "Lunken...";
+                sonarText.className = "text-xs font-bold text-sky-400 uppercase tracking-wider";
+                sonarBar.className = "bg-sky-400 h-full transition-all duration-200";
+                sonarDot.className = "w-3.5 h-3.5 rounded-full bg-sky-400";
+            } else {
+                sonarText.innerText = "Kold!";
+                sonarText.className = "text-xs font-semibold text-slate-500 uppercase tracking-wider";
+                sonarBar.className = "bg-slate-700 h-full transition-all duration-200";
+                sonarDot.className = "w-3.5 h-3.5 rounded-full bg-slate-600";
+            }
+        }
+
+        function updateTimer() {
+            if (!isPlaying || isPaused) return;
+            timeLeft -= 0.1;
+
+            if (timeLeft <= 5 && timeLeft > 0) {
+                audio.setTempo(Math.min(210, 160 + (level * 5)));
+            }
+
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                handlePlayerHit("Tiden udløb!");
+            }
+            updateHUD();
+        }
+
+        function checkCollisions() {
+            if (player.x === target.x && player.y === target.y) {
+                score += 200 + Math.floor(timeLeft * 20);
+                level++;
+                audio.playCollect();
+                if (level % 2 === 0) audio.playLevelUp();
+                startLevel();
+                return;
+            }
+
+            if (ghosts.some(g => g.x === player.x && g.y === player.y)) {
+                handlePlayerHit("Et spøgelse ramte dig!");
+            }
+        }
+
+        function handlePlayerHit(reason) {
+            lives--;
+            audio.playHit();
+            updateHUD();
+
+            if (lives <= 0) {
+                endGame(reason);
+            } else {
+                player.x = 0;
+                player.y = 0;
+                updateSonarMeter();
+            }
+        }
+
+        function updateGhosts() {
+            if (isPaused) return;
+            ghosts.forEach(g => {
+                g.moveTimer++;
+                if (g.moveTimer >= g.speed) {
+                    g.moveTimer = 0;
+
+                    let nextX = g.x + g.vx;
+                    let nextY = g.y + g.vy;
+
+                    if (nextX < -GRID_SIZE || nextX > GRID_SIZE || rocks.some(r => r.x === nextX && r.y === g.y)) {
+                        g.vx *= -1;
+                        nextX = g.x + g.vx;
+                    }
+                    if (nextY < -GRID_SIZE || nextY > GRID_SIZE || rocks.some(r => r.y === nextY && r.x === g.x)) {
+                        g.vy *= -1;
+                        nextY = g.y + g.vy;
+                    }
+
+                    g.x = Math.max(-GRID_SIZE, Math.min(GRID_SIZE, nextX));
+                    g.y = Math.max(-GRID_SIZE, Math.min(GRID_SIZE, nextY));
+                }
+            });
+
+            if (isPlaying && ghosts.some(g => g.x === player.x && g.y === player.y)) {
+                handlePlayerHit("Et spøgelse ramte dig!");
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreDisplay').innerText = score;
+            document.getElementById('levelDisplay').innerText = level;
+            document.getElementById('timerText').innerText = `${Math.ceil(timeLeft)}s`;
+
+            const timerBar = document.getElementById('timerBar');
+            const pct = Math.max(0, (timeLeft / maxTime) * 100);
+            timerBar.style.width = `${pct}%`;
+
+            if (pct < 30) {
+                timerBar.className = "bg-red-500 h-full w-full transition-all duration-200 animate-pulse";
+            } else {
+                timerBar.className = "bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-full transition-all duration-200";
+            }
+
+            const heartsContainer = document.getElementById('livesContainer');
+            heartsContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const heart = document.createElement('i');
+                if (i < lives) {
+                    heart.className = 'fa-solid fa-heart text-red-500';
+                } else {
+                    heart.className = 'fa-regular fa-heart text-slate-700';
+                }
+                heartsContainer.appendChild(heart);
+            }
+        }
+
+        function togglePause() {
+            if (!isPlaying) return;
+            isPaused = !isPaused;
+            
+            const pauseOverlay = document.getElementById('pauseScreen');
+            const overlay = document.getElementById('overlay');
+            const pauseText = document.getElementById('pauseText');
+            const pauseIcon = document.getElementById('pauseIcon');
+
+            if (isPaused) {
+                audio.stopMusic();
+                overlay.classList.remove('hidden');
+                document.getElementById('startScreen').classList.add('hidden');
+                document.getElementById('gameOverScreen').classList.add('hidden');
+                pauseOverlay.classList.remove('hidden');
+                pauseText.innerText = "Fortsæt";
+                pauseIcon.className = "fa-solid fa-play text-emerald-400";
+            } else {
+                audio.startMusic();
+                overlay.classList.add('hidden');
+                pauseOverlay.classList.add('hidden');
+                pauseText.innerText = "Pause";
+                pauseIcon.className = "fa-solid fa-pause text-amber-400";
+            }
+        }
+
+        function endGame(reason) {
+            isPlaying = false;
+            audio.stopMusic();
+            if (timerInterval) clearInterval(timerInterval);
+
+            const savedHighScore = parseInt(localStorage.getItem('koordinat_highscore') || '0');
+            if (score > savedHighScore) {
+                localStorage.setItem('koordinat_highscore', score.toString());
+            }
+
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('highScore').innerText = Math.max(score, savedHighScore);
+            document.getElementById('gameOverReason').innerText = reason;
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('pauseScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const center = gridToPixel(0, 0);
+
+            for (let i = -GRID_SIZE; i <= GRID_SIZE; i++) {
+                const pos = gridToPixel(i, i);
+
+                ctx.strokeStyle = (i === 0) ? 'rgba(6, 182, 212, 0.95)' : 'rgba(30, 41, 59, 0.45)';
+                ctx.lineWidth = (i === 0) ? 2.5 : 1;
+                ctx.beginPath();
+                ctx.moveTo(pos.x, 18);
+                ctx.lineTo(pos.x, canvas.height - 18);
+                ctx.stroke();
+
+                ctx.strokeStyle = (i === 0) ? 'rgba(16, 185, 129, 0.95)' : 'rgba(30, 41, 59, 0.45)';
+                ctx.beginPath();
+                ctx.moveTo(18, pos.y);
+                ctx.lineTo(canvas.width - 18, pos.y);
+                ctx.stroke();
+
+                if (i !== 0 && i % 2 === 0) {
+                    ctx.font = 'bold 9px Inter, sans-serif';
+                    ctx.fillStyle = '#64748b';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(i, pos.x, center.y + 14);
+                    ctx.textAlign = 'right';
+                    ctx.fillText(i, center.x - 6, pos.y + 3);
+                }
+            }
+
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.fillStyle = '#22d3ee';
+            ctx.textAlign = 'right';
+            ctx.fillText('+X', canvas.width - 20, center.y - 6);
+
+            ctx.fillStyle = '#34d399';
+            ctx.textAlign = 'left';
+            ctx.fillText('+Y', center.x + 6, 24);
+
+            rocks.forEach(r => {
+                const p = gridToPixel(r.x, r.y);
+                ctx.fillStyle = '#475569';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, pSize() * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            ghosts.forEach(g => {
+                const gp = gridToPixel(g.x, g.y);
+                ctx.fillStyle = '#c084fc';
+                ctx.beginPath();
+                ctx.arc(gp.x, gp.y - 2, pSize() * 0.7, Math.PI, 0, false);
+                ctx.lineTo(gp.x + pSize() * 0.7, gp.y + pSize() * 0.7);
+                ctx.lineTo(gp.x - pSize() * 0.7, gp.y + pSize() * 0.7);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(gp.x - 3, gp.y - 3, 2, 0, Math.PI * 2);
+                ctx.arc(gp.x + 3, gp.y - 3, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            const targetP = gridToPixel(player.x, player.y);
+            player.renderX += (targetP.x - player.renderX) * 0.35;
+            player.renderY += (targetP.y - player.renderY) * 0.35;
+
+            ctx.fillStyle = '#6366f1';
+            ctx.beginPath();
+            ctx.arc(player.renderX, player.renderY, pSize(), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#a5b4fc';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(player.renderX, player.renderY - 2, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (isPlaying) {
+                updateGhosts();
+            }
+            requestAnimationFrame(render);
+        }
+
+        function pSize() {
+            return (canvas.width - 72) / (GRID_SIZE * 2) * 0.42;
+        }
+
+        function bindEvents() {
+            window.addEventListener('keydown', (e) => {
+                audio.init();
+                if (!isPlaying || isPaused) return;
+                switch (e.key) {
+                    case 'ArrowUp': case 'w': case 'W': movePlayer(0, 1); break;
+                    case 'ArrowDown': case 's': case 'S': movePlayer(0, -1); break;
+                    case 'ArrowLeft': case 'a': case 'A': movePlayer(-1, 0); break;
+                    case 'ArrowRight': case 'd': case 'D': movePlayer(1, 0); break;
+                }
+            });
+
+            const addDpadListener = (id, dx, dy) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const handler = (e) => {
+                    e.preventDefault();
+                    audio.init();
+                    movePlayer(dx, dy);
+                };
+                el.addEventListener('click', handler);
+                el.addEventListener('touchstart', handler, { passive: false });
+            };
+
+            addDpadListener('btnUp', 0, 1);
+            addDpadListener('btnDown', 0, -1);
+            addDpadListener('btnLeft', -1, 0);
+            addDpadListener('btnRight', 1, 0);
+
+            document.getElementById('jumpBtn').addEventListener('click', () => {
+                audio.init();
+                const xVal = parseInt(document.getElementById('inputX').value);
+                const yVal = parseInt(document.getElementById('inputY').value);
+                if (!isNaN(xVal) && !isNaN(yVal)) {
+                    jumpToCoordinate(xVal, yVal);
+                }
+            });
+
+            canvas.addEventListener('click', (e) => {
+                audio.init();
+                if (!isPlaying || isPaused) return;
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                const clickX = (e.clientX - rect.left) * scaleX;
+                const clickY = (e.clientY - rect.top) * scaleY;
+
+                const targetGrid = pixelToGrid(clickX, clickY);
+                jumpToCoordinate(targetGrid.x, targetGrid.y);
+            });
+
+            document.getElementById('musicToggle').addEventListener('click', () => {
+                audio.init();
+                audio.musicMuted = !audio.musicMuted;
+                const musicIcon = document.getElementById('musicIcon');
+                const musicText = document.getElementById('musicText');
+
+                if (audio.musicMuted) {
+                    audio.stopMusic();
+                    musicIcon.className = "fa-solid fa-volume-xmark text-slate-500";
+                    musicText.innerText = "Musik Af";
+                } else {
+                    musicIcon.className = "fa-solid fa-music text-pink-400 music-pulse";
+                    musicText.innerText = "Musik Til";
+                    if (isPlaying && !isPaused) audio.startMusic();
+                }
+            });
+
+            document.getElementById('soundToggle').addEventListener('click', () => {
+                audio.init();
+                audio.sfxMuted = !audio.sfxMuted;
+                const soundIcon = document.getElementById('soundIcon');
+                const soundText = document.getElementById('soundText');
+
+                if (audio.sfxMuted) {
+                    soundIcon.className = "fa-solid fa-volume-xmark text-red-400";
+                    soundText.innerText = "SFX Af";
+                } else {
+                    soundIcon.className = "fa-solid fa-volume-high text-emerald-400";
+                    soundText.innerText = "SFX Til";
+                }
+            });
+
+            document.getElementById('pauseBtn').addEventListener('click', togglePause);
+            document.getElementById('resumeBtn').addEventListener('click', togglePause);
+
+            document.getElementById('startBtn').addEventListener('click', () => {
+                audio.init();
+                document.getElementById('overlay').classList.add('hidden');
+                isPlaying = true;
+                isPaused = false;
+                initGame();
+            });
+
+            document.getElementById('restartBtn').addEventListener('click', () => {
+                audio.init();
+                document.getElementById('overlay').classList.add('hidden');
+                isPlaying = true;
+                isPaused = false;
+                initGame();
+            });
+
+            const helpModal = document.getElementById('helpModal');
+            document.getElementById('helpBtn').addEventListener('click', () => helpModal.classList.remove('hidden'));
+            document.getElementById('closeHelpBtn').addEventListener('click', () => helpModal.classList.add('hidden'));
+            document.getElementById('closeHelpModalBtn').addEventListener('click', () => helpModal.classList.add('hidden'));
+        }
+
+        window.onload = function() {
+            bindEvents();
+            render();
+        };
+    </script>
+</body>
+</html>
