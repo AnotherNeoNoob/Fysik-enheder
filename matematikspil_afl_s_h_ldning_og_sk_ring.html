@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Træn Hældning (a) og Skæring (b)</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f1f5f9;
+        }
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-6 text-slate-800">
+
+    <div class="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+        <!-- Header & Stats Bar -->
+        <div class="bg-indigo-600 text-white p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Linjens Ligning: <span class="font-serif italic">y</span> = <span class="text-yellow-300 font-bold">a</span><span class="font-serif italic">x</span> + <span class="text-emerald-300 font-bold">b</span></h1>
+                    <p class="text-indigo-100 text-sm mt-1">Træn aflæsning af hældning <span class="font-bold underline decoration-yellow-400">a</span> og skæring <span class="font-bold underline decoration-emerald-400">b</span></p>
+                </div>
+                <!-- Stats Dashboard -->
+                <div class="flex gap-3 bg-indigo-700/60 p-3 rounded-xl backdrop-blur-sm border border-indigo-500/30">
+                    <div class="text-center px-2">
+                        <span class="block text-xs uppercase tracking-wider text-indigo-200 font-semibold">Niveau</span>
+                        <span id="level-badge" class="text-xl font-bold text-yellow-300">1</span>
+                    </div>
+                    <div class="w-px bg-indigo-500/50"></div>
+                    <div class="text-center px-2">
+                        <span class="block text-xs uppercase tracking-wider text-indigo-200 font-semibold">Point</span>
+                        <span id="score-display" class="text-xl font-bold">0</span>
+                    </div>
+                    <div class="w-px bg-indigo-500/50"></div>
+                    <div class="text-center px-2">
+                        <span class="block text-xs uppercase tracking-wider text-indigo-200 font-semibold">Streak 🔥</span>
+                        <span id="streak-display" class="text-xl font-bold text-orange-400">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Level Indicator Bar -->
+            <div class="mt-4 pt-3 border-t border-indigo-500/40 text-xs sm:text-sm flex justify-between items-center text-indigo-100">
+                <span id="level-description"><b>Niveau 1:</b> Tæl på ternene (Gitter slået til)</span>
+                <span id="streak-needed" class="bg-indigo-800/80 px-2.5 py-1 rounded-full text-indigo-200 font-medium">3 rigtige i rad til Niveau 2</span>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT LAYOUT -->
+        <div class="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Canvas Column (Graph Display) -->
+            <div class="lg:col-span-7 flex flex-col items-center justify-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div class="relative w-full aspect-square max-w-[450px]">
+                    <canvas id="graphCanvas" class="w-full h-full rounded-lg bg-white shadow-inner border border-slate-300"></canvas>
+                </div>
+                <div id="graph-hint" class="text-xs text-slate-600 mt-2 text-center bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm w-full">
+                    💡 <b>Tip:</b> <span class="font-bold text-indigo-600">a</span> = <span class="inline-flex flex-col text-center align-middle mx-1 font-semibold text-slate-700"><span class="border-b border-slate-400 px-1">lodret ændring</span><span class="px-1">vandret ændring</span></span> og <span class="font-bold text-emerald-600">b</span> = hvor linjen skærer Y-aksen
+                </div>
+            </div>
+
+            <!-- Input & Interaction Column -->
+            <div class="lg:col-span-5 flex flex-col justify-between space-y-5">
+                
+                <!-- Coordinate Points Box (Shown on Level 2 & 3) -->
+                <div id="points-box" class="hidden bg-amber-50 border border-amber-200 p-3.5 rounded-xl text-amber-900 text-sm">
+                    <p class="font-bold mb-1 flex items-center gap-1.5 text-amber-800">
+                        📍 Kendte punkter på linjen:
+                    </p>
+                    <div class="flex justify-around text-base font-semibold py-1">
+                        <span id="point-A-text" class="bg-white px-3 py-1 rounded-lg border border-amber-300 shadow-sm">A(?, ?)</span>
+                        <span id="point-B-text" class="bg-white px-3 py-1 rounded-lg border border-amber-300 shadow-sm">B(?, ?)</span>
+                    </div>
+                </div>
+
+                <!-- Equation Input Form -->
+                <div class="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200 space-y-4">
+                    <h2 class="font-bold text-slate-700 text-lg border-b border-slate-200 pb-2">Indtast dine svar:</h2>
+                    
+                    <div class="space-y-3">
+                        <!-- Input for 'a' -->
+                        <div>
+                            <label for="input-a" class="block text-sm font-semibold text-slate-700 mb-1">
+                                Hældningskoefficient (<span class="text-indigo-600 font-bold">a</span>):
+                            </label>
+                            <input type="number" step="any" id="input-a" placeholder="fx 2 eller -0.5" 
+                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg font-medium text-slate-800 transition">
+                        </div>
+
+                        <!-- Input for 'b' -->
+                        <div>
+                            <label for="input-b" class="block text-sm font-semibold text-slate-700 mb-1">
+                                Skæring med Y-aksen (<span class="text-emerald-600 font-bold">b</span>):
+                            </label>
+                            <input type="number" step="any" id="input-b" placeholder="fx 3 eller -1" 
+                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg font-medium text-slate-800 transition">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="pt-2 flex gap-3">
+                        <button id="btn-check" onclick="checkAnswer()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition flex justify-center items-center gap-2">
+                            <span>Tjek svar</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        </button>
+                        <button id="btn-next" onclick="nextQuestion()" class="hidden flex-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition justify-center items-center gap-2">
+                            <span>Næste opgave</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Feedback Area -->
+                <div id="feedback-card" class="p-4 rounded-xl border transition-all duration-300 hidden">
+                    <div id="feedback-content" class="text-sm"></div>
+                </div>
+
+                <!-- Help Accordion / Formula -->
+                <div class="border-t border-slate-200 pt-3">
+                    <button onclick="toggleFormulaHelp()" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Se formler og hjælp til beregning</span>
+                    </button>
+                    <div id="formula-help" class="hidden mt-2 p-3 bg-indigo-50/70 border border-indigo-100 rounded-lg text-xs text-indigo-950 space-y-2">
+                        <p><strong>Formel for hældningskoefficient (a):</strong></p>
+                        <div class="bg-white p-2 rounded-lg border border-indigo-200 text-center font-mono text-sm flex items-center justify-center gap-2 shadow-sm">
+                            <span>a =</span>
+                            <span class="inline-flex flex-col text-center font-sans font-medium text-xs">
+                                <span class="border-b border-slate-400 px-1 text-indigo-700">y₂ - y₁</span>
+                                <span class="px-1 text-indigo-700">x₂ - x₁</span>
+                            </span>
+                        </div>
+                        <p class="pt-1"><strong>Formel for skæring (b):</strong> Sæt et punkt (x₁, y₁) og hældningen <i>a</i> ind i linjens ligning og isolér <i>b</i>:</p>
+                        <div class="bg-white p-2 rounded-lg border border-indigo-200 text-center font-mono text-sm shadow-sm text-emerald-700 font-bold">
+                            b = y₁ - a · x₁
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State Variables
+        let state = {
+            level: 1,
+            score: 0,
+            streak: 0,
+            firstAttempt: true,
+            currentA: 1,
+            currentB: 0,
+            pointA: { x: 0, y: 0 },
+            pointB: { x: 0, y: 0 },
+            // Coordinate range settings
+            minCoord: -7,
+            maxCoord: 7
+        };
+
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function setupCanvas() {
+            // High DPI support for crisp lines
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            drawGraph();
+        }
+
+        // Convert math coordinates (x, y) to Canvas pixel coordinates
+        function toPixel(x, y) {
+            const rect = canvas.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            
+            const range = state.maxCoord - state.minCoord;
+            const pxX = ((x - state.minCoord) / range) * width;
+            const pxY = height - (((y - state.minCoord) / range) * height);
+            
+            return { x: pxX, y: pxY };
+        }
+
+        function drawGraph() {
+            const rect = canvas.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+
+            ctx.clearRect(0, 0, width, height);
+
+            const min = state.minCoord;
+            const max = state.maxCoord;
+            const range = max - min;
+
+            // 1. DRAW GRID (Only on Level 1)
+            if (state.level === 1) {
+                // VERY VISIBLE GRID LINES (#cbd5e1 - Slate 300)
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 1.2;
+
+                for (let i = min; i <= max; i++) {
+                    // Vertical grid line
+                    const p1 = toPixel(i, min);
+                    const p2 = toPixel(i, max);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+
+                    // Horizontal grid line
+                    const p3 = toPixel(min, i);
+                    const p4 = toPixel(max, i);
+                    ctx.beginPath();
+                    ctx.moveTo(p3.x, p3.y);
+                    ctx.lineTo(p4.x, p4.y);
+                    ctx.stroke();
+                }
+            } else {
+                // Light subtle background grid for Levels 2 & 3 just for depth
+                ctx.strokeStyle = '#f1f5f9';
+                ctx.lineWidth = 1;
+                for (let i = min; i <= max; i += 2) {
+                    const p1 = toPixel(i, min);
+                    const p2 = toPixel(i, max);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+
+                    const p3 = toPixel(min, i);
+                    const p4 = toPixel(max, i);
+                    ctx.beginPath();
+                    ctx.moveTo(p3.x, p3.y);
+                    ctx.lineTo(p4.x, p4.y);
+                    ctx.stroke();
+                }
+            }
+
+            // 2. DRAW MAIN AXES (X and Y)
+            ctx.strokeStyle = '#0f172a'; // Dark slate/black
+            ctx.lineWidth = 2.5;
+
+            // Y-Axis (x=0)
+            const originTop = toPixel(0, max);
+            const originBottom = toPixel(0, min);
+            ctx.beginPath();
+            ctx.moveTo(originTop.x, originTop.y);
+            ctx.lineTo(originBottom.x, originBottom.y);
+            ctx.stroke();
+
+            // X-Axis (y=0)
+            const originLeft = toPixel(min, 0);
+            const originRight = toPixel(max, 0);
+            ctx.beginPath();
+            ctx.moveTo(originLeft.x, originLeft.y);
+            ctx.lineTo(originRight.x, originRight.y);
+            ctx.stroke();
+
+            // 3. DRAW AXES TICKS AND NUMBERS
+            ctx.fillStyle = '#334155';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            for (let i = min; i <= max; i++) {
+                if (i === 0) continue; // Skip origin label to avoid clutter
+
+                // X-Axis tick
+                const pX = toPixel(i, 0);
+                ctx.beginPath();
+                ctx.moveTo(pX.x, pX.y - 4);
+                ctx.lineTo(pX.x, pX.y + 4);
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillText(i.toString(), pX.x, pX.y + 6);
+
+                // Y-Axis tick
+                const pY = toPixel(0, i);
+                ctx.beginPath();
+                ctx.moveTo(pY.x - 4, pY.y);
+                ctx.lineTo(pY.x + 4, pY.y);
+                ctx.stroke();
+
+                ctx.save();
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(i.toString(), pY.x - 7, pY.y);
+                ctx.restore();
+            }
+
+            // 4. DRAW LINE FUNCTION (y = ax + b)
+            ctx.strokeStyle = '#2563eb'; // Vibrant Royal Blue
+            ctx.lineWidth = 3.5;
+
+            const lineStartPixel = toPixel(min, state.currentA * min + state.currentB);
+            const lineEndPixel = toPixel(max, state.currentA * max + state.currentB);
+
+            ctx.beginPath();
+            ctx.moveTo(lineStartPixel.x, lineStartPixel.y);
+            ctx.lineTo(lineEndPixel.x, lineEndPixel.y);
+            ctx.stroke();
+
+            // 5. DRAW POINTS (If Level 2 or 3)
+            if (state.level >= 2) {
+                drawPoint(state.pointA, 'A');
+                drawPoint(state.pointB, 'B');
+            }
+        }
+
+        // Helper to draw marked points with label
+        function drawPoint(pt, label) {
+            const p = toPixel(pt.x, pt.y);
+            
+            // Outer glow ring
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(217, 119, 6, 0.3)';
+            ctx.fill();
+
+            // Inner solid dot
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#d97706'; // Amber 600
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Label text
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillStyle = '#92400e';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${label}(${pt.x}, ${pt.y})`, p.x + 8, p.y - 8);
+        }
+
+        function generateProblem() {
+            state.firstAttempt = true;
+
+            if (state.level === 1) {
+                // Level 1: Simple whole integer values for a and b
+                const aValues = [-3, -2, -1, 0.5, 1, 2, 3];
+                state.currentA = aValues[Math.floor(Math.random() * aValues.length)];
+                state.currentB = Math.floor(Math.random() * 9) - 4; // -4 to 4
+            } 
+            else if (state.level === 2) {
+                // Level 2: Whole numbers or simple halves, hidden grid, 2 explicit points
+                const aValues = [-2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 3];
+                state.currentA = aValues[Math.floor(Math.random() * aValues.length)];
+                state.currentB = Math.floor(Math.random() * 9) - 4; // -4 to 4
+
+                // Pick two distinct integer x-coordinates for points A and B
+                let x1 = Math.floor(Math.random() * 5) - 4; // -4 to 0
+                let x2 = Math.floor(Math.random() * 4) + 1;  // 1 to 4
+                
+                // Ensure y coordinates stay within printable bounds (-6 to 6)
+                let y1 = state.currentA * x1 + state.currentB;
+                let y2 = state.currentA * x2 + state.currentB;
+
+                if (Math.abs(y1) > 6 || Math.abs(y2) > 6) {
+                    // Fallback to safer values if points go off graph
+                    x1 = -1;
+                    x2 = 2;
+                    y1 = state.currentA * x1 + state.currentB;
+                    y2 = state.currentA * x2 + state.currentB;
+                }
+
+                state.pointA = { x: x1, y: y1 };
+                state.pointB = { x: x2, y: y2 };
+            } 
+            else {
+                // Level 3: Harder numbers (decimals/fractions) & random points
+                const aValues = [-2.5, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 2.5];
+                state.currentA = aValues[Math.floor(Math.random() * aValues.length)];
+                state.currentB = (Math.floor(Math.random() * 10) - 5) * 0.5; // e.g. -2.5 to 2.5
+
+                let x1 = -2;
+                let x2 = 3;
+                let y1 = state.currentA * x1 + state.currentB;
+                let y2 = state.currentA * x2 + state.currentB;
+
+                state.pointA = { x: x1, y: y1 };
+                state.pointB = { x: x2, y: y2 };
+            }
+
+            updateUIForCurrentProblem();
+            drawGraph();
+        }
+
+        function updateUIForCurrentProblem() {
+            // Clear inputs
+            document.getElementById('input-a').value = '';
+            document.getElementById('input-b').value = '';
+
+            // Reset buttons & feedback
+            document.getElementById('btn-check').classList.remove('hidden');
+            document.getElementById('btn-next').classList.add('hidden');
+            document.getElementById('feedback-card').classList.add('hidden');
+
+            // Level UI elements
+            document.getElementById('level-badge').textContent = state.level;
+            document.getElementById('score-display').textContent = state.score;
+            document.getElementById('streak-display').textContent = state.streak;
+
+            const pointsBox = document.getElementById('points-box');
+            const levelDesc = document.getElementById('level-description');
+            const streakNeeded = document.getElementById('streak-needed');
+
+            if (state.level === 1) {
+                levelDesc.innerHTML = '<b>Niveau 1:</b> Tæl på ternene (Gitter slået til)';
+                streakNeeded.textContent = `${3 - (state.streak % 3)} rigtige mere til Niveau 2`;
+                pointsBox.classList.add('hidden');
+            } else if (state.level === 2) {
+                levelDesc.innerHTML = '<b>Niveau 2:</b> Intet gitter - beregn ud fra 2 punkter';
+                streakNeeded.textContent = `${3 - (state.streak % 3)} rigtige mere til Niveau 3`;
+                pointsBox.classList.remove('hidden');
+                document.getElementById('point-A-text').textContent = `A(${state.pointA.x}, ${state.pointA.y})`;
+                document.getElementById('point-B-text').textContent = `B(${state.pointB.x}, ${state.pointB.y})`;
+            } else {
+                levelDesc.innerHTML = '<b>Niveau 3:</b> Svære koordinater & decimaler 🔥';
+                streakNeeded.textContent = 'Mester-niveau nået!';
+                pointsBox.classList.remove('hidden');
+                document.getElementById('point-A-text').textContent = `A(${state.pointA.x}, ${state.pointA.y})`;
+                document.getElementById('point-B-text').textContent = `B(${state.pointB.x}, ${state.pointB.y})`;
+            }
+        }
+
+        function checkAnswer() {
+            const userA = parseFloat(document.getElementById('input-a').value.replace(',', '.'));
+            const userB = parseFloat(document.getElementById('input-b').value.replace(',', '.'));
+
+            if (isNaN(userA) || isNaN(userB)) {
+                showFeedback('Indtast venligst et tal i begge felter.', 'warning');
+                return;
+            }
+
+            // Margin of error allowance for floating numbers
+            const isACorrect = Math.abs(userA - state.currentA) < 0.05;
+            const isBCorrect = Math.abs(userB - state.currentB) < 0.05;
+
+            const feedbackCard = document.getElementById('feedback-card');
+
+            if (isACorrect && isBCorrect) {
+                // CORRECT ANSWER
+                if (state.firstAttempt) {
+                    state.score += 10 * state.level;
+                    state.streak += 1;
+
+                    // Check for level up after 3 consecutive correct in first attempt
+                    if (state.streak % 3 === 0 && state.level < 3) {
+                        state.level += 1;
+                        showFeedback(`🎉 <b>Rigtigt i 1. forsøg!</b> Flot gået! Du har låst op for <b>Niveau ${state.level}</b>!`, 'success');
+                    } else {
+                        showFeedback(`✨ <b>Rigtigt!</b> Godt spottet. (+${10 * state.level} point)`, 'success');
+                    }
+                } else {
+                    showFeedback(`Flot! Du fandt det rigtige svar: <b>y = ${state.currentA}x ${state.currentB >= 0 ? '+ ' + state.currentB : state.currentB}</b>`, 'info');
+                }
+
+                // Switch buttons
+                document.getElementById('btn-check').classList.add('hidden');
+                document.getElementById('btn-next').classList.remove('hidden');
+                
+                // Update header metrics
+                document.getElementById('score-display').textContent = state.score;
+                document.getElementById('streak-display').textContent = state.streak;
+
+            } else {
+                // INCORRECT ANSWER
+                state.streak = 0; // Reset streak
+                state.firstAttempt = false;
+                document.getElementById('streak-display').textContent = state.streak;
+
+                let hintMsg = '<b>Forkert - prøv igen!</b><br>';
+                if (!isACorrect && !isBCorrect) {
+                    hintMsg += 'Hverken <i>a</i> eller <i>b</i> er korrekt.';
+                } else if (!isACorrect) {
+                    hintMsg += 'Din skæring <i>b</i> er rigtig, men hældningen <i>a</i> er forkert.';
+                } else {
+                    hintMsg += 'Din hældning <i>a</i> er rigtig, men skæringen <i>b</i> er forkert.';
+                }
+
+                if (state.level >= 2) {
+                    hintMsg += `<br><span class="text-xs mt-1 block">Brug formlen: a = (${state.pointB.y} - ${state.pointA.y}) / (${state.pointB.x} - ${state.pointA.x})</span>`;
+                }
+
+                showFeedback(hintMsg, 'danger');
+            }
+        }
+
+        function showFeedback(message, type) {
+            const card = document.getElementById('feedback-card');
+            const content = document.getElementById('feedback-content');
+
+            card.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-900', 
+                                         'bg-rose-50', 'border-rose-200', 'text-rose-900',
+                                         'bg-amber-50', 'border-amber-200', 'text-amber-900',
+                                         'bg-sky-50', 'border-sky-200', 'text-sky-900');
+
+            if (type === 'success') {
+                card.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-900');
+            } else if (type === 'danger') {
+                card.classList.add('bg-rose-50', 'border-rose-200', 'text-rose-900');
+            } else if (type === 'warning') {
+                card.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-900');
+            } else {
+                card.classList.add('bg-sky-50', 'border-sky-200', 'text-sky-900');
+            }
+
+            content.innerHTML = message;
+        }
+
+        function nextQuestion() {
+            generateProblem();
+        }
+
+        function toggleFormulaHelp() {
+            const help = document.getElementById('formula-help');
+            help.classList.toggle('hidden');
+        }
+
+        // Initialize game on load and window resize
+        window.onload = function() {
+            setupCanvas();
+            generateProblem();
+            
+            // Handle window resize for responsive canvas
+            window.addEventListener('resize', () => {
+                setupCanvas();
+            });
+        };
+    </script>
+</body>
+</html>
